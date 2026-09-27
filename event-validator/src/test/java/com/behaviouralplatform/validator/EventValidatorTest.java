@@ -10,7 +10,11 @@ import static org.assertj.core.api.Assertions.tuple;
 import com.behaviouralplatform.schemas.SharedSchemaRegistry;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.assertj.core.groups.Tuple;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class EventValidatorTest {
 
@@ -111,6 +115,28 @@ class EventValidatorTest {
         event.put("schemaVersion", "2");
 
         assertErrors(validator.validate(event), tuple("INVALID_TYPE", "schemaVersion"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, -1})
+    void schemaVersionBelowOneIsUnknownVersion(int version) {
+        ObjectNode event = productViewedV2();
+        event.put("schemaVersion", version);
+
+        assertErrors(validator.validate(event), tuple("UNKNOWN_SCHEMA_VERSION", "schemaVersion"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidEventTypeNames")
+    void eventTypeThatCannotNameAContractIsUnknownEventType(String eventType) {
+        ObjectNode event = productViewedV2();
+        event.put("eventType", eventType);
+
+        assertErrors(validator.validate(event), tuple("UNKNOWN_EVENT_TYPE", "eventType"));
+    }
+
+    static Stream<String> invalidEventTypeNames() {
+        return Stream.of(":.:behavioural_envelope", "a".repeat(101), "product\u0000viewed", "Product_Viewed", "behavioural_envelope");
     }
 
     private static void assertErrors(ValidationResult result, Tuple... expected) {

@@ -75,4 +75,17 @@ class RawEventListenerIntegrationTest {
 
         KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, TIMEOUT);
     }
+
+    @Test
+    void schemaVersionZeroIsInvalidNotRetried() throws Exception {
+        String eventId = ValidatorTestEvents.uniqueEventId();
+        String raw = ValidatorTestEvents.json(eventId, "product_viewed", 0, "{\"productId\":\"SKU-981\"}");
+
+        KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "user-123", raw);
+
+        ConsumerRecord<String, byte[]> record = KafkaTopics.awaitRecord(
+                SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.INVALID_TOPIC, eventId, TIMEOUT);
+        JsonNode document = Json.MAPPER.readTree(record.value());
+        assertThat(document.get("validationErrors").get(0).get("code").asText()).isEqualTo("UNKNOWN_SCHEMA_VERSION");
+    }
 }
