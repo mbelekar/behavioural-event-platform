@@ -20,6 +20,7 @@ Accept behavioural events over HTTP and store them durably in `behavioural.raw` 
 - **R5.** The record key is `userId`, or `sessionId` when `userId` is blank.
 - **R6.** `202 Accepted` with `{"eventId": …, "status": "accepted"}` is returned only after Kafka acknowledges the write.
 - **R7.** Errors use ProblemDetail (`application/problem+json`).
+- **R8.** An event that Kafka rejects as too large returns `413 Payload Too Large`, which tells the client not to retry it. Other publish failures return `503`.
 
 ## Acceptance criteria
 
@@ -30,6 +31,7 @@ Accept behavioural events over HTTP and store them durably in `behavioural.raw` 
 - **AC5.** An event missing `eventType`, `userId` and `sessionId` returns `400` with `fields` `eventType` and `userId|sessionId`, and nothing is written.
 - **AC6.** Malformed JSON, an unknown top-level field or an unparseable `occurredAt` returns `400` "Failed to read request", and nothing is written.
 - **AC7.** With Kafka unavailable, a request returns `503` within about 10 seconds.
+- **AC8.** An event larger than Kafka's 1 MB request limit returns `413`, and nothing is written.
 
 ## Failure and edge cases
 
@@ -40,7 +42,7 @@ Accept behavioural events over HTTP and store them durably in `behavioural.raw` 
 | Client retries after a `503` or timeout | The client reuses its `eventId`. The collector does not deduplicate. |
 | Wrong payload fields, or unknown or malformed `eventType` / `schemaVersion` | `202`. The validator marks the event invalid. |
 | Schema Registry unavailable | No effect on ingestion. |
-| Event larger than Kafka's 1 MB request limit | `503` on every attempt. **Open issue:** a retry can never succeed. |
+| Event larger than Kafka's 1 MB request limit | `413`. The client must not retry it; the collector still reads the whole body before Kafka rejects it. |
 
 ## Discrepancies
 
