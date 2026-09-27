@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Starts local Kafka (Cluster A), Schema Registry and the behavioural.* topics
+# (docker-compose.yml), waits until they are healthy, then registers the event
+# schemas. Safe to re-run: registration skips schemas that are already registered.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+docker compose up -d --wait
+./gradlew :schema-registration:registerSchemas

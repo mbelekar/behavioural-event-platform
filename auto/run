@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Runs one service against the local stack from ./auto/live-up:
+#   ./auto/run collector    # POST /v1/events on http://localhost:8080
+#   ./auto/run validator    # behavioural.raw -> behavioural.valid / behavioural.invalid
+# Remaining args pass to Gradle. KAFKA_BOOTSTRAP_SERVERS and SCHEMA_REGISTRY_URL
+# override the local defaults.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+service="${1:-}"
+case "$service" in
+  collector|validator)
+    shift
+    ./gradlew ":event-$service:bootRun" "$@"
+    ;;
+  *)
+    echo "usage: ./auto/run collector|validator [gradle args]" >&2
+    exit 1
+    ;;
+esac

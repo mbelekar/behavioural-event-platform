@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Compiles every module and builds the service jars, without running tests.
+# Needs only a JDK 17+ to launch Gradle; the build downloads JDK 21 if needed.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+./gradlew assemble "$@"

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Stops everything ./auto/live-up started and removes its volumes, so the next
+# ./auto/live-up starts from empty topics and an empty Schema Registry.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+docker compose down -v
