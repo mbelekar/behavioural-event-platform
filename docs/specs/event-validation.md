@@ -41,7 +41,11 @@ Turn untrusted events on `behavioural.raw` into a trusted stream. Events that co
   | `eventType` `wishlist_added`, `behavioural_envelope`, `:.:behavioural_envelope`, over 100 characters, or with a control character or upper-case letter | `UNKNOWN_EVENT_TYPE` | `eventType` |
   | `schemaVersion` `9`, `0` or `-1` | `UNKNOWN_SCHEMA_VERSION` | `schemaVersion` |
   | `eventType` missing | `REQUIRED_FIELD_MISSING` | `eventType` |
+  | `eventType` `42` | `INVALID_TYPE` | `eventType` |
+  | `schemaVersion` missing or `null` | `REQUIRED_FIELD_MISSING` | `schemaVersion` |
   | `schemaVersion` `"2"` | `INVALID_TYPE` | `schemaVersion` |
+  | `occurredAt` `"yesterday"` | `INVALID_FORMAT` | `occurredAt` |
+  | `purchase_completed` `currency` `"usd"` | `SCHEMA_VIOLATION` | `payload.currency` |
 
 - **AC6.** An event produces a record on exactly one of `behavioural.valid` and `behavioural.invalid`.
 

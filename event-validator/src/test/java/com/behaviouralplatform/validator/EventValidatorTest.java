@@ -92,6 +92,25 @@ class EventValidatorTest {
     }
 
     @Test
+    void malformedDateTimeIsInvalidFormat() {
+        ObjectNode event = productViewedV2();
+        event.put("occurredAt", "yesterday");
+
+        assertErrors(validator.validate(event), tuple("INVALID_FORMAT", "occurredAt"));
+    }
+
+    @Test
+    void otherContractRuleIsSchemaViolation() {
+        ObjectNode purchase = node(json(
+                uniqueEventId(),
+                "purchase_completed",
+                1,
+                "{\"orderId\":\"order-1\",\"amount\":49.99,\"currency\":\"usd\"}"));
+
+        assertErrors(validator.validate(purchase), tuple("SCHEMA_VIOLATION", "payload.currency"));
+    }
+
+    @Test
     void unknownEventType() {
         ObjectNode event = node(json(uniqueEventId(), "wishlist_added", 1, "{}"));
 
@@ -112,6 +131,27 @@ class EventValidatorTest {
         event.remove("eventType");
 
         assertErrors(validator.validate(event), tuple("REQUIRED_FIELD_MISSING", "eventType"));
+    }
+
+    @Test
+    void nonStringEventType() {
+        ObjectNode event = productViewedV2();
+        event.put("eventType", 42);
+
+        assertErrors(validator.validate(event), tuple("INVALID_TYPE", "eventType"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void missingOrNullSchemaVersion(boolean explicitNull) {
+        ObjectNode event = productViewedV2();
+        if (explicitNull) {
+            event.putNull("schemaVersion");
+        } else {
+            event.remove("schemaVersion");
+        }
+
+        assertErrors(validator.validate(event), tuple("REQUIRED_FIELD_MISSING", "schemaVersion"));
     }
 
     @Test
