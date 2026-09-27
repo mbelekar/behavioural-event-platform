@@ -60,7 +60,7 @@ Accept behavioural events from web and mobile clients over HTTP and durably stor
 | Client retries after a `503` or a timeout | The client must reuse the same `eventId`. The collector does **not** deduplicate, so a retried event can be stored twice with the same `eventId`; consumers deduplicate downstream. |
 | `payload` is `null`, a number or an array | `400`, with `payload` in `fields` |
 | `payload` contents | Not checked at ingestion. Wrong or missing payload fields are accepted (`202`) and later marked invalid by the validator. |
-| Unknown `eventType` or `schemaVersion` | Accepted (`202`). The collector has no knowledge of registered schemas; the validator marks such events invalid. |
+| Unknown or malformed `eventType` or `schemaVersion` (e.g. `schemaVersion: 0`) | Accepted (`202`). The collector has no knowledge of registered schemas; the validator marks such events invalid. |
 | Schema Registry unavailable | No effect on ingestion |
 | `behavioural.raw` doesn't exist | Treated like Kafka being unavailable (`503`). The collector never creates topics. |
 

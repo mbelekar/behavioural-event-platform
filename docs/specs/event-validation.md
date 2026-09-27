@@ -43,8 +43,8 @@ Turn the untrusted events on `behavioural.raw` into a trusted stream. Every even
   | `INVALID_TYPE` | A value has the wrong JSON type, including `null` for a non-nullable field, or a non-string `eventType` or non-integer `schemaVersion` | Path of the value |
   | `INVALID_FORMAT` | A string doesn't match its required format (e.g. a date-time) | Path of the value |
   | `UNKNOWN_FIELD` | A field that the contract doesn't allow | Path of the unexpected field |
-  | `UNKNOWN_EVENT_TYPE` | No contract is registered for `eventType`, or `eventType` is `behavioural_envelope` | `eventType` |
-  | `UNKNOWN_SCHEMA_VERSION` | The event type exists, but not that `schemaVersion` | `schemaVersion` |
+  | `UNKNOWN_EVENT_TYPE` | No contract is registered for `eventType`; `eventType` is `behavioural_envelope`; or `eventType` isn't a valid event type name (lower-case letter first, then lower-case letters, digits or `_`, at most 100 characters) | `eventType` |
+  | `UNKNOWN_SCHEMA_VERSION` | The event type exists, but not that `schemaVersion`; or `schemaVersion` is less than 1 | `schemaVersion` |
   | `SCHEMA_VIOLATION` | Any other contract rule (e.g. a pattern, a minimum, or `eventType` not matching the contract) | Path of the value |
 
 **Delivery**
@@ -74,6 +74,9 @@ Turn the untrusted events on `behavioural.raw` into a trusted stream. Every even
   | `eventType` `wishlist_added` | `UNKNOWN_EVENT_TYPE` | `eventType` |
   | `eventType` `behavioural_envelope` | `UNKNOWN_EVENT_TYPE` | `eventType` |
   | `schemaVersion` `9` | `UNKNOWN_SCHEMA_VERSION` | `schemaVersion` |
+  | `schemaVersion` `0` or `-1` | `UNKNOWN_SCHEMA_VERSION` | `schemaVersion` |
+  | `eventType` `:.:behavioural_envelope` | `UNKNOWN_EVENT_TYPE` | `eventType` |
+  | `eventType` longer than 100 characters, or containing a control character or upper-case letter | `UNKNOWN_EVENT_TYPE` | `eventType` |
   | `eventType` missing | `REQUIRED_FIELD_MISSING` | `eventType` |
   | `schemaVersion` `"2"` (a string) | `INVALID_TYPE` | `schemaVersion` |
 
