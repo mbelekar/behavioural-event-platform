@@ -1,7 +1,7 @@
 package com.behaviouralplatform.validator;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.IOException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +25,7 @@ class RawEventListener {
     }
 
     @KafkaListener(topics = RAW_TOPIC, groupId = "event-validator")
-    void onRawEvent(ConsumerRecord<String, String> record) throws JsonProcessingException {
+    void onRawEvent(ConsumerRecord<String, byte[]> record) throws IOException {
         JsonNode event = Json.MAPPER.readTree(record.value());
         ValidationResult result = validator.validate(event);
         if (result.valid()) {

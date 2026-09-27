@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.behaviouralplatform.schemas.SharedSchemaRegistry;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -33,7 +34,8 @@ class ValidatedEventPublisherTest {
         try {
             assertTimeoutPreemptively(
                     Duration.ofSeconds(10),
-                    () -> assertThatThrownBy(() -> publisher.publishValid("user-123", "{}", 1))
+                    () -> assertThatThrownBy(
+                                    () -> publisher.publishValid("user-123", "{}".getBytes(StandardCharsets.UTF_8), 1))
                             .isInstanceOf(PublishFailedException.class)
                             .hasMessageContaining(ValidatedEventPublisher.VALID_TOPIC));
         } finally {
@@ -55,7 +57,7 @@ class ValidatedEventPublisherTest {
         var publisher = new ValidatedEventPublisher(new KafkaTemplate<>(producerFactory));
 
         try {
-            assertThatThrownBy(() -> publisher.publishValid("user-123", "x".repeat(2048), 1))
+            assertThatThrownBy(() -> publisher.publishValid("user-123", new byte[2048], 1))
                     .isNotInstanceOf(PublishFailedException.class)
                     .satisfies(e -> assertThat(e).hasRootCauseInstanceOf(RecordTooLargeException.class));
         } finally {

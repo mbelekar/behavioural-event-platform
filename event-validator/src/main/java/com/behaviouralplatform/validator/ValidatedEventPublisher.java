@@ -2,7 +2,6 @@ package com.behaviouralplatform.validator;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import org.apache.kafka.common.errors.RetriableException;
@@ -23,8 +22,8 @@ class ValidatedEventPublisher {
     }
 
     /** Republishes the producer's exact JSON, framed with the id of the schema it conformed to. */
-    void publishValid(String key, String rawJson, int schemaId) {
-        send(VALID_TOPIC, key, SchemaRegistryWireFormat.frame(schemaId, rawJson.getBytes(StandardCharsets.UTF_8)));
+    void publishValid(String key, byte[] rawJson, int schemaId) {
+        send(VALID_TOPIC, key, SchemaRegistryWireFormat.frame(schemaId, rawJson));
     }
 
     void publishInvalid(String key, JsonNode event, List<ValidationError> errors) {
