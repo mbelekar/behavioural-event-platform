@@ -7,7 +7,9 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 import tools.jackson.databind.node.ObjectNode;
 
 @WebMvcTest(EventController.class)
@@ -59,7 +62,7 @@ class EventControllerTest {
         node.remove("sessionId");
 
         mvc.perform(post("/v1/events").contentType(APPLICATION_JSON).content(node.toString()))
-                .andExpect(status().isBadRequest())
+                .andExpect(problem(400))
                 .andExpect(jsonPath("$.fields", containsInAnyOrder("eventType", "userId|sessionId")));
         verifyNoInteractions(publisher);
     }
@@ -70,14 +73,14 @@ class EventControllerTest {
         node.put("eventTyp", "typo");
 
         mvc.perform(post("/v1/events").contentType(APPLICATION_JSON).content(node.toString()))
-                .andExpect(status().isBadRequest());
+                .andExpect(problem(400));
         verifyNoInteractions(publisher);
     }
 
     @Test
     void rejectsMalformedJson() throws Exception {
         mvc.perform(post("/v1/events").contentType(APPLICATION_JSON).content("{not json"))
-                .andExpect(status().isBadRequest());
+                .andExpect(problem(400));
     }
 
     @Test
@@ -86,7 +89,7 @@ class EventControllerTest {
         node.put("occurredAt", "yesterday");
 
         mvc.perform(post("/v1/events").contentType(APPLICATION_JSON).content(node.toString()))
-                .andExpect(status().isBadRequest());
+                .andExpect(problem(400));
     }
 
     @Test
@@ -95,6 +98,15 @@ class EventControllerTest {
                 .when(publisher).publish(any());
 
         mvc.perform(post("/v1/events").contentType(APPLICATION_JSON).content(TestEvents.VALID_JSON))
-                .andExpect(status().isServiceUnavailable());
+                .andExpect(problem(503));
+    }
+
+    /** Every error response uses the same RFC 9457 ProblemDetail shape. */
+    private static ResultMatcher problem(int status) {
+        return result -> {
+            status().is(status).match(result);
+            content().contentType(APPLICATION_PROBLEM_JSON).match(result);
+            jsonPath("$.status").value(status).match(result);
+        };
     }
 }
