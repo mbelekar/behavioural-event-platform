@@ -4,4 +4,4 @@ plugins {
 
 rootProject.name = "behavioural-event-platform"
 
-include("event-contracts", "event-collector", "schema-registration", "event-validator")
+include("event-contracts", "event-collector", "schema-registration", "event-validator", "integration-tests")

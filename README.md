@@ -172,10 +172,12 @@ The project favours tests against real Kafka and Schema Registry (Testcontainers
 | Validator tests | Schema lookup, the 12 validation scenarios, publishing to valid / invalid | Yes |
 | Outage test | A paused Schema Registry holds the event (never marks it invalid) and delivers it after recovery | Yes |
 | Collector end-to-end | HTTP → `behavioural.raw` with the expected key and metadata | Yes |
+| Pipeline tests | HTTP → collector → validator → `behavioural.valid` / `behavioural.invalid`, using the real service jars | Yes |
 
 ```bash
-./gradlew build                        # everything: 74 tests
+./gradlew build                        # everything: 76 tests
 ./gradlew :event-validator:test        # one module
+./gradlew :integration-tests:test      # pipeline tests only
 ```
 
 ## Project structure
@@ -190,6 +192,7 @@ schema-registration/
 ├── src/main/                    # ordered registration + registerSchemas task
 └── src/testFixtures/            # shared Kafka + Schema Registry test containers
 event-validator/                 # behavioural.raw → behavioural.valid / behavioural.invalid
+integration-tests/               # pipeline tests running the service jars
 docs/
 ├── Design.md                    # full platform design
 └── decisions/                   # architecture decision records
@@ -200,7 +203,7 @@ docs/
 | Phase | Outcome | Status |
 | --- | --- | --- |
 | 1 | HTTP ingestion to `behavioural.raw` | ✅ Done |
-| 2 | Schema validation with Schema Registry; `behavioural.valid` / `behavioural.invalid` | 🚧 In progress |
+| 2 | Schema validation with Schema Registry; `behavioural.valid` / `behavioural.invalid` | ✅ Done |
 | 3 | Business validation, bounded retries, `validation.dlq` | 📋 Planned |
 | 4 | Event Router to a second Kafka cluster | 📋 Planned |
 | 5 | Reliability hardening and failure-injection tests | 📋 Planned |
