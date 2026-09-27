@@ -1,5 +1,6 @@
 plugins {
     `java-library`
+    `java-test-fixtures`
 }
 
 java {
@@ -18,6 +19,10 @@ dependencies {
     api(libs.schema.registry.client)
     api(libs.json.schema.provider)
 
+    testFixturesApi(platform(libs.spring.boot.dependencies))
+    testFixturesApi(libs.testcontainers.kafka)
+    testFixturesApi(libs.kafka.clients)
+
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
     testRuntimeOnly(libs.junit.platform.launcher)
@@ -26,4 +31,14 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
     systemProperty("schemas.dir", rootDir.resolve("event-contracts/schemas").absolutePath)
+}
+
+tasks.register<JavaExec>("registerSchemas") {
+    group = "schema registry"
+    description = "Registers event-contracts/schemas in Schema Registry (-PschemaRegistryUrl=..., default http://localhost:8081)"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "com.behaviouralplatform.schemas.SchemaRegistration"
+    args(
+        providers.gradleProperty("schemaRegistryUrl").getOrElse("http://localhost:8081"),
+        rootDir.resolve("event-contracts/schemas").absolutePath)
 }

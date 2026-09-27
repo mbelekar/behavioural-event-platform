@@ -784,6 +784,9 @@ behavioural-event-platform/
 │   ├── schemas/
 │   └── src/
 │
+├── schema-registration/
+│   └── src/
+│
 ├── integration-tests/
 │
 ├── infrastructure/
