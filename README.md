@@ -18,7 +18,7 @@ HTTP ingestion and asynchronous schema validation are implemented.
 | Valid / invalid event streams | ✅ Implemented |
 | Business validation and DLQ | 📋 Planned |
 | Cross-cluster Event Router | 📋 Planned |
-| Observability | 📋 Planned |
+| Observability (metrics, tracing, dashboards) | ⏸️ Deferred until productionisation |
 
 See [`docs/Design.md`](docs/Design.md) for the full design.
 
