@@ -64,6 +64,24 @@ class SchemaRegistrationTest {
 
         assertThatThrownBy(() -> SchemaRegistration.register(client, dir))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining(subject + "/v1.json was registered as version 2");
+                .hasMessageContaining(subject + "/v1.json cannot be registered")
+                .hasMessageContaining("latest version of " + subject + " is 1");
+        assertThat(client.getAllVersions(subject)).containsExactly(1);
+    }
+
+    @Test
+    void skippedVersionFileRegistersNothing(@TempDir Path dir) throws Exception {
+        SchemaRegistryClient client = SharedSchemaRegistry.client();
+        String subject = "skip_test_" + UUID.randomUUID().toString().replace("-", "");
+        Files.createDirectories(dir.resolve(subject));
+        Files.writeString(dir.resolve(subject).resolve("v1.json"),
+                "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"}},\"additionalProperties\":false}");
+        Files.writeString(dir.resolve(subject).resolve("v3.json"),
+                "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"},\"b\":{\"type\":\"string\"}},\"additionalProperties\":false}");
+
+        assertThatThrownBy(() -> SchemaRegistration.register(client, dir))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(subject + "/v3.json cannot be registered");
+        assertThat(client.getAllVersions(subject)).containsExactly(1);
     }
 }

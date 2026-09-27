@@ -15,7 +15,7 @@ For each schema file, registration:
 
 - sets the subject's compatibility to `BACKWARD`,
 - registers the files in order,
-- **fails if the registry assigns a version different from the file name** (`v<N>.json`).
+- **checks, before registering, that the file will get its file-name version** (`v<N>.json`), and fails without changing the registry if it won't.
 
 ## Context
 
@@ -27,10 +27,14 @@ Design.md section 19 gives each service the least privilege it needs. The valida
 
 - `SchemaFiles.load` reads `event-contracts/schemas/`, envelope first (other subjects reference it), then subjects alphabetically, versions ascending.
 - A reference is derived from each `$ref` name (`behavioural_envelope/v1.json` → subject `behavioural_envelope`, version 1).
-- `SchemaRegistration.register` sets compatibility, registers each schema, then asks the registry which version it holds and compares that with the file name.
-- **Re-running is safe.** Registering a schema identical to an existing version returns the existing ID and creates no new version.
+- `SchemaRegistration.register` sets compatibility, then checks each file against the registry **before** registering it:
+  - if the registry already holds that exact schema, it must be at the file's version;
+  - otherwise the subject's latest version must be exactly one lower than the file's (or the subject must not exist yet, for `v1.json`).
+
+  Only then is the schema registered. The check comes first because Schema Registry assigns a version as soon as a schema is registered, and never takes it back: checking afterwards would leave a stray version behind on every mismatch.
+- **Re-running is safe.** A schema that is already registered at its file's version is reported with its existing ID, and nothing new is registered.
 - **An incompatible change stops the run.** Schema Registry rejects it with `409`, before any service is deployed with it.
-- **A version mismatch stops the run** with a message naming the file and the version the registry assigned, for example after a file was skipped or a schema was registered by hand.
+- **A version mismatch stops the run and leaves the registry unchanged** for that file. The message names the file and the registry's latest version. This covers a skipped file, an edited already-registered file, and a schema registered by hand.
 
 The code lives in its own `schema-registration` module rather than in `event-contracts`. The collector depends on `event-contracts`, and the Schema Registry client (with Avro, Guava and more) has no place in the collector's jar.
 
