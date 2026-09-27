@@ -3,7 +3,7 @@
 ## Decision
 
 The Event Collector's only job is to durably write accepted events to the Kafka topic `behavioural.raw`.
-It returns `202 Accepted` only after the broker has acknowledged the write (`acks=all`, idempotent producer), and `503 Service Unavailable` if that can't happen within about 5 seconds.
+It returns `202 Accepted` only after the broker has acknowledged the write (`acks=all`, idempotent producer), and `503 Service Unavailable` if that can't happen within at most about 10 seconds.
 All further processing (schema validation, business validation, routing) happens asynchronously, downstream of that topic.
 
 ## Context
@@ -18,7 +18,7 @@ A durable topic between ingestion and processing absorbs those outages: events w
 1. **Parse strictly.** Malformed JSON, an unparseable timestamp or an unknown top-level field gets `400`. Unknown fields are rejected rather than silently dropped, so a typo such as `eventTyp` is visible to the client.
 2. **Basic shape checks.** These are the required envelope fields, with at least one of `userId`/`sessionId` and `payload` as a JSON object. Failures get `400` with a `fields` list.
 3. **Platform metadata.** `correlationId` is taken from the body, else the `X-Correlation-Id` header, else generated. `receivedAt` is always set by the server.
-4. **Synchronous publish** to `behavioural.raw`, keyed as described in ADR 0003. Producer limits (`max.block.ms=5000`, `delivery.timeout.ms=10000`) keep a Kafka outage from hanging requests.
+4. **Synchronous publish** to `behavioural.raw`, keyed as described in ADR 0003. Producer limits keep a Kafka outage from hanging requests. `max.block.ms=5000` bounds the wait when the producer has no metadata for the topic yet (for example, Kafka was down at startup). `delivery.timeout.ms=10000` bounds the wait for a record that has been queued but not acknowledged (for example, the broker went down while the collector was running). The worst case is therefore about 10 seconds.
 
 "Raw events are immutable" is interpreted as: **client-supplied data is never altered; platform fields are added to the envelope.** `eventId` is never generated or changed (ADR 0002).
 
