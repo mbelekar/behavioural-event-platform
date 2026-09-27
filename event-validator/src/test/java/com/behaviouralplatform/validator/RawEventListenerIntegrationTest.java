@@ -47,6 +47,7 @@ class RawEventListenerIntegrationTest {
 
         ConsumerRecord<String, byte[]> record = KafkaTopics.awaitRecord(
                 SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, TIMEOUT);
+        assertNotOn(eventId, ValidatedEventPublisher.INVALID_TOPIC, ValidatorConfiguration.DLQ_TOPIC);
         assertThat(record.key()).isEqualTo("user-123");
         assertThat(ByteBuffer.wrap(record.value(), 1, 4).getInt())
                 .isEqualTo(SharedSchemaRegistry.client()
@@ -73,6 +74,7 @@ class RawEventListenerIntegrationTest {
 
         ConsumerRecord<String, byte[]> record = KafkaTopics.awaitRecord(
                 SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.INVALID_TOPIC, eventId, TIMEOUT);
+        assertNotOn(eventId, ValidatedEventPublisher.VALID_TOPIC, ValidatorConfiguration.DLQ_TOPIC);
         assertThat(record.key()).isEqualTo("user-123");
         JsonNode document = Json.MAPPER.readTree(record.value());
         assertThat(document.get("event")).isEqualTo(Json.MAPPER.readTree(raw));
@@ -129,7 +131,7 @@ class RawEventListenerIntegrationTest {
                 .isEqualTo("behavioural.raw");
         assertThat(new String(header(dead, KafkaHeaders.DLT_EXCEPTION_CAUSE_FQCN), StandardCharsets.UTF_8))
                 .contains("JsonParseException");
-        assertNoOutcome(eventId);
+        assertNotOn(eventId, ValidatedEventPublisher.VALID_TOPIC, ValidatedEventPublisher.INVALID_TOPIC);
         assertThat(output.getOut())
                 .containsPattern("WARN .*Retrying behavioural\\.raw-" + partition + "@" + offset
                         + " key=dlq-user \\(attempt 3\\)")
@@ -152,7 +154,7 @@ class RawEventListenerIntegrationTest {
                 SharedSchemaRegistry.bootstrapServers(), ValidatorConfiguration.DLQ_TOPIC, eventId, TIMEOUT);
         assertThat(dead.key()).isEqualTo("big-user");
         assertThat(dead.value()).isEqualTo(raw.getBytes(StandardCharsets.UTF_8));
-        assertNoOutcome(eventId);
+        assertNotOn(eventId, ValidatedEventPublisher.VALID_TOPIC, ValidatedEventPublisher.INVALID_TOPIC);
 
         String nextId = ValidatorTestEvents.uniqueEventId();
         KafkaTopics.send(
@@ -169,8 +171,8 @@ class RawEventListenerIntegrationTest {
         return record.headers().lastHeader(name).value();
     }
 
-    private static void assertNoOutcome(String eventId) {
-        for (String topic : new String[] {ValidatedEventPublisher.VALID_TOPIC, ValidatedEventPublisher.INVALID_TOPIC}) {
+    private static void assertNotOn(String eventId, String... topics) {
+        for (String topic : topics) {
             assertThat(KafkaTopics.recordsContaining(
                             SharedSchemaRegistry.bootstrapServers(), topic, eventId, Duration.ofSeconds(2)))
                     .as(topic)
