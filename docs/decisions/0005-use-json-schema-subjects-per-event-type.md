@@ -1,70 +1,22 @@
 # 0005 — Use JSON Schema subjects per event type
 
-## Decision
-
-Event contracts are **JSON Schema (draft-07)** documents registered in Confluent Schema Registry:
-
-- **One subject per event type,** named exactly as the `eventType` (e.g. `product_viewed`).
-- **The envelope's `schemaVersion` equals the registry's version number** for that subject.
-- **The common envelope is its own subject, `behavioural_envelope`.** Every event-type schema combines it, through `$ref`, with that type's `payload` definition.
-- **The content model is closed** (`"additionalProperties": false`), for the envelope and every payload.
-- **Every subject uses `BACKWARD` compatibility.**
-- **`behavioural_envelope` is reserved** and is never a valid `eventType`.
-
 ## Context
 
-The validator must decide whether an event conforms to a registered contract (Design.md sections 7.1 and 11), and schema evolution must be enforced by Schema Registry rather than by each service (section 10).
+Events arrive as JSON. The validator needs a versioned contract for the whole event, including its envelope and event-specific payload.
 
-Events are JSON from the client, through `behavioural.raw`, to consumers. The trusted topic must mean "the whole event conforms to a registered schema", including the envelope, not only the payload.
+## Decision
 
-## How it works
+Register draft-07 JSON Schemas in Confluent Schema Registry. Each event type has one subject named after its `eventType`; `schemaVersion` maps to that subject's registry version. Event schemas reference a versioned `behavioural_envelope` subject. Subjects use `BACKWARD` compatibility and reject unknown fields. The envelope subject name is reserved.
 
-Schema files live in `event-contracts/schemas/<subject>/v<N>.json`:
+## Why
 
-```text
-event-contracts/schemas/
-├── behavioural_envelope/v1.json
-├── product_viewed/v1.json
-├── product_viewed/v2.json
-└── ...
-```
+Separate subjects let event types evolve independently while the registry checks successive versions. A shared envelope avoids duplication. Closed schemas expose misspelled fields.
 
-An event-type schema is the envelope plus its payload:
+One subject per version would bypass compatibility checks. Payload-only schemas would leave the envelope outside the contract. Avro and Protobuf would require converting incoming JSON.
 
-```json
-{
-  "title": "product_viewed",
-  "allOf": [
-    { "$ref": "behavioural_envelope/v1.json" },
-    { "properties": { "eventType": { "const": "product_viewed" }, "payload": { "...": "..." } } }
-  ]
-}
-```
+## Consequences
 
-The `$ref` name, `<subject>/v<N>.json`, says exactly which subject and version it refers to. Registration turns it into a Schema Registry reference (subject `behavioural_envelope`, version 1), so each schema is pinned to the envelope version it was written against.
-
-The validator reads `eventType` and `schemaVersion` from an event, fetches that subject and version, and validates the whole event.
-
-Schema Registry checks compatibility between versions of the same subject. With a closed content model (verified against Schema Registry 8.3.2):
-
-| Change | Result |
-|---|---|
-| Add an optional field (`product_viewed` v2 adds `recommendationSource`) | Accepted |
-| Add a new required field | Rejected |
-| Change a field's type | Rejected |
-
-## Alternatives considered
-
-- **Avro or Protobuf.** Compact, with mature compatibility rules. Rejected: JSON events would need a conversion step, conversion errors are harder to report as field-level errors, and the trusted topic would carry binary data that is harder to inspect.
-- **One subject per event type *and* version** (`product_viewed-v2`). Rejected: each subject would hold one schema, so Schema Registry would never check v2 against v1.
-- **The registry's schema ID in the envelope instead of `schemaVersion`.** Rejected: client SDKs would depend on registry-internal IDs that differ between environments.
-- **Payload-only schemas.** Rejected: the envelope would only be enforced by Java code, and the trusted topic couldn't claim full schema conformance.
-- **The envelope copied into every type schema.** Rejected: an envelope change would mean editing every file for every type.
-- **An open content model** (unknown fields allowed). Rejected: typos such as `productID` would pass silently. The collector already rejects unknown top-level fields for the same reason.
-
-## Consequences and trade-offs
-
-- Schemas must be registered in order, with no gaps, and never deleted, or `schemaVersion` would stop matching the registry's version (see ADR 0006).
-- Optional fields must be **omitted** rather than sent as `null`. `null` is only allowed where a schema says so (for example `userId` and `sessionId` in the envelope).
-- Changing the envelope means a new `behavioural_envelope` version, plus a new version of every event type that should use it.
-- Unknown fields are always rejected. A producer that starts sending a new field before its schema version is registered will have those events marked invalid.
+- Register schemas in version order and keep them append-only.
+- Register a compatible version before producers send new fields.
+- Envelope changes require new versions of event schemas that reference it.
+- Optional fields may be omitted; `null` is accepted only where permitted.
