@@ -16,7 +16,8 @@ HTTP ingestion and asynchronous schema validation are implemented.
 | Schema Registry integration | ✅ Implemented |
 | Event Validator | ✅ Implemented |
 | Valid / invalid event streams | ✅ Implemented |
-| Business validation and DLQ | 📋 Planned |
+| Dead-letter topic (`validation.dlq`) | ✅ Implemented |
+| Business validation | 📋 Planned |
 | Cross-cluster Event Router | 📋 Planned |
 | Observability (metrics, tracing, dashboards) | ⏸️ Deferred until productionisation |
 
@@ -40,7 +41,7 @@ behavioural.valid
 
 Anything on `behavioural.valid` conforms to a registered schema.
 
-Invalid producer data goes to `behavioural.invalid`. Infrastructure failures are retried rather than being mistaken for bad data.
+Invalid producer data goes to `behavioural.invalid`. Infrastructure failures are retried rather than being mistaken for bad data. Events that can't be processed at all are set aside in `validation.dlq`, not lost.
 
 ## Architecture
 
@@ -54,6 +55,7 @@ flowchart LR
 
     VALIDATOR -->|valid| VALID[(behavioural.valid)]
     VALIDATOR -->|invalid| INVALID[(behavioural.invalid)]
+    VALIDATOR -->|processing failure| DLQ[(validation.dlq)]
 
     VALID -. planned .-> ROUTER[Event Router<br/>planned]
     ROUTER -. planned .-> TARGET[(Kafka Cluster B)]
@@ -128,6 +130,28 @@ HTTP
 ```
 
 An event that does not conform to its registered schema is instead published to `behavioural.invalid` with structured validation errors.
+
+### Inspect and replay the DLQ
+
+A raw record the validator can't process (for example, one that isn't JSON) is retried twice, then copied unchanged to `validation.dlq`. Headers record the exception and the source topic, partition and offset (the last two are binary). To inspect it:
+
+```bash
+docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+  --topic validation.dlq --from-beginning --timeout-ms 10000 \
+  --formatter-property print.key=true --formatter-property print.headers=true
+```
+
+Once the cause is fixed, copy the records back to `behavioural.raw` to validate them again. The copy is saved to a file first, so a record that fails again is not replayed in a loop:
+
+```bash
+docker exec kafka-a sh -c '/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+    --topic validation.dlq --from-beginning --timeout-ms 10000 \
+    --formatter-property print.key=true --formatter-property key.separator="|" > /tmp/dlq.txt \
+  && /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 \
+    --topic behavioural.raw --reader-property parse.key=true --reader-property key.separator="|" < /tmp/dlq.txt'
+```
+
+This replays every record in `validation.dlq`, one per line, so it suits JSON events only. Replayed events keep their `eventId`, so consumers deduplicate them as usual.
 
 ## Testing
 
