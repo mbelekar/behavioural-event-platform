@@ -70,7 +70,7 @@ Schema Registry holds versioned JSON Schema contracts for each event type and en
 Requirements:
 
 - Docker
-- JDK 17+
+- JDK 17+ (Gradle downloads JDK 21 for the build)
 
 Build the services:
 

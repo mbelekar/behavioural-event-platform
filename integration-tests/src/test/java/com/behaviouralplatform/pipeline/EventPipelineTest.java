@@ -20,7 +20,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/** Design.md section 21: HTTP → behavioural.raw → validator → behavioural.valid / behavioural.invalid. */
+/** Design.md "Testing": HTTP → behavioural.raw → validator → behavioural.valid / behavioural.invalid. */
 class EventPipelineTest {
 
     static final Duration TIMEOUT = Duration.ofSeconds(60);
