@@ -20,15 +20,20 @@ class ValidatedEventPublisherTest {
     @Test
     void failsWithinBoundWhenBrokerUnreachable() {
         var producerFactory = new DefaultKafkaProducerFactory<String, byte[]>(Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:1",
-                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
-                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class,
-                ProducerConfig.MAX_BLOCK_MS_CONFIG, 1000));
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                "localhost:1",
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class,
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                ByteArraySerializer.class,
+                ProducerConfig.MAX_BLOCK_MS_CONFIG,
+                1000));
         var publisher = new ValidatedEventPublisher(new KafkaTemplate<>(producerFactory));
 
         try {
-            assertTimeoutPreemptively(Duration.ofSeconds(10), () ->
-                    assertThatThrownBy(() -> publisher.publishValid("user-123", "{}", 1))
+            assertTimeoutPreemptively(
+                    Duration.ofSeconds(10),
+                    () -> assertThatThrownBy(() -> publisher.publishValid("user-123", "{}", 1))
                             .isInstanceOf(PublishFailedException.class)
                             .hasMessageContaining(ValidatedEventPublisher.VALID_TOPIC));
         } finally {
@@ -39,10 +44,14 @@ class ValidatedEventPublisherTest {
     @Test
     void permanentFailureIsNotRetryable() {
         var producerFactory = new DefaultKafkaProducerFactory<String, byte[]>(Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, SharedSchemaRegistry.bootstrapServers(),
-                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
-                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class,
-                ProducerConfig.MAX_REQUEST_SIZE_CONFIG, 1024));
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                SharedSchemaRegistry.bootstrapServers(),
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class,
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                ByteArraySerializer.class,
+                ProducerConfig.MAX_REQUEST_SIZE_CONFIG,
+                1024));
         var publisher = new ValidatedEventPublisher(new KafkaTemplate<>(producerFactory));
 
         try {

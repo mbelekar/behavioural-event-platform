@@ -9,8 +9,8 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import com.behaviouralplatform.schemas.SharedSchemaRegistry;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.assertj.core.groups.Tuple;
 import java.util.stream.Stream;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -22,7 +22,9 @@ class EventValidatorTest {
 
     @Test
     void validEventPassesWithItsSchemaId() throws Exception {
-        int expectedId = SharedSchemaRegistry.client().getSchemaMetadata("product_viewed", 2).getId();
+        int expectedId = SharedSchemaRegistry.client()
+                .getSchemaMetadata("product_viewed", 2)
+                .getId();
 
         ValidationResult result = validator.validate(productViewedV2());
 
@@ -33,14 +35,16 @@ class EventValidatorTest {
 
     @Test
     void olderSchemaVersionStillValidates() {
-        ObjectNode v1 = node(json(uniqueEventId(), "product_viewed", 1, "{\"productId\":\"SKU-981\",\"category\":\"laptops\"}"));
+        ObjectNode v1 = node(
+                json(uniqueEventId(), "product_viewed", 1, "{\"productId\":\"SKU-981\",\"category\":\"laptops\"}"));
 
         assertThat(validator.validate(v1).valid()).isTrue();
     }
 
     @Test
     void v1EventWithV2FieldIsUnknownField() {
-        ObjectNode v1 = node(json(uniqueEventId(), "product_viewed", 1, "{\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}"));
+        ObjectNode v1 = node(json(
+                uniqueEventId(), "product_viewed", 1, "{\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}"));
 
         assertErrors(validator.validate(v1), tuple("UNKNOWN_FIELD", "payload.recommendationSource"));
     }
@@ -81,7 +85,8 @@ class EventValidatorTest {
     void reportsEveryViolation() {
         ObjectNode purchase = node(json(uniqueEventId(), "purchase_completed", 1, "{\"orderId\":\"order-1\"}"));
 
-        assertErrors(validator.validate(purchase),
+        assertErrors(
+                validator.validate(purchase),
                 tuple("REQUIRED_FIELD_MISSING", "payload.amount"),
                 tuple("REQUIRED_FIELD_MISSING", "payload.currency"));
     }
@@ -136,13 +141,20 @@ class EventValidatorTest {
     }
 
     static Stream<String> invalidEventTypeNames() {
-        return Stream.of(":.:behavioural_envelope", "a".repeat(101), "product\u0000viewed", "Product_Viewed", "behavioural_envelope");
+        return Stream.of(
+                ":.:behavioural_envelope",
+                "a".repeat(101),
+                "product\u0000viewed",
+                "Product_Viewed",
+                "behavioural_envelope");
     }
 
     private static void assertErrors(ValidationResult result, Tuple... expected) {
         assertThat(result.valid()).isFalse();
         assertThat(result.schemaId()).isNull();
-        assertThat(result.errors()).extracting(ValidationError::code, ValidationError::field).containsExactlyInAnyOrder(expected);
+        assertThat(result.errors())
+                .extracting(ValidationError::code, ValidationError::field)
+                .containsExactlyInAnyOrder(expected);
         assertThat(result.errors()).allSatisfy(e -> assertThat(e.message()).isNotBlank());
     }
 }

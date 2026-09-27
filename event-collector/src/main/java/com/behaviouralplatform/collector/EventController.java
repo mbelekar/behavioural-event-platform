@@ -47,7 +47,10 @@ class EventController {
 
     @ExceptionHandler(EventTooLargeException.class)
     ProblemDetail eventTooLarge(EventTooLargeException e) {
-        log.warn("Rejected event {}: too large for Kafka ({})", e.eventId(), e.getCause().getMessage());
+        log.warn(
+                "Rejected event {}: too large for Kafka ({})",
+                e.eventId(),
+                e.getCause().getMessage());
         return ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONTENT_TOO_LARGE, "Event exceeds the maximum size accepted by the platform");
     }

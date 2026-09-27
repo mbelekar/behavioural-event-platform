@@ -22,8 +22,7 @@ final class TestEvents {
             }
             """;
 
-    private TestEvents() {
-    }
+    private TestEvents() {}
 
     static ObjectNode validNode() {
         return (ObjectNode) MAPPER.readTree(VALID_JSON);

@@ -1,4 +1,3 @@
 package com.behaviouralplatform.collector;
 
-record IngestionResponse(String eventId, String status) {
-}
+record IngestionResponse(String eventId, String status) {}

@@ -28,19 +28,23 @@ class SchemaExamplesTest {
         List<SchemaFile> all = SchemaFiles.load(Path.of(System.getProperty("schemas.dir")));
         SchemaFile file = all.stream()
                 .filter(f -> f.subject().equals(subject) && f.version() == version)
-                .findFirst().orElseThrow();
+                .findFirst()
+                .orElseThrow();
         return SchemaFiles.toJsonSchema(file, all);
     }
 
     @ParameterizedTest
-    @CsvSource(delimiter = '|', value = {
-            "page_viewed        | 1 | {\"pageUrl\":\"https://shop.example/home\"}",
-            "product_viewed     | 1 | {\"productId\":\"SKU-981\",\"category\":\"laptops\"}",
-            "product_viewed     | 2 | {\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}",
-            "search_performed   | 1 | {\"query\":\"laptop\",\"resultCount\":42}",
-            "button_clicked     | 1 | {\"buttonId\":\"add-to-cart\"}",
-            "checkout_started   | 1 | {\"cartId\":\"cart-1\",\"itemCount\":2}",
-            "purchase_completed | 1 | {\"orderId\":\"order-1\",\"amount\":1299.95,\"currency\":\"AUD\"}"})
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "page_viewed        | 1 | {\"pageUrl\":\"https://shop.example/home\"}",
+                "product_viewed     | 1 | {\"productId\":\"SKU-981\",\"category\":\"laptops\"}",
+                "product_viewed     | 2 | {\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}",
+                "search_performed   | 1 | {\"query\":\"laptop\",\"resultCount\":42}",
+                "button_clicked     | 1 | {\"buttonId\":\"add-to-cart\"}",
+                "checkout_started   | 1 | {\"cartId\":\"cart-1\",\"itemCount\":2}",
+                "purchase_completed | 1 | {\"orderId\":\"order-1\",\"amount\":1299.95,\"currency\":\"AUD\"}"
+            })
     void acceptsCollectorShapedExample(String type, int version, String payload) throws Exception {
         JsonSchema schema = schema(type, version);
 
@@ -67,7 +71,8 @@ class SchemaExamplesTest {
     @Test
     void envelopeRejectsUnknownTopLevelField() throws Exception {
         JsonSchema v1 = schema("product_viewed", 1);
-        String event = event("product_viewed", 1, "{\"productId\":\"SKU-981\"}").replace("\"source\"", "\"debug\":true,\"source\"");
+        String event = event("product_viewed", 1, "{\"productId\":\"SKU-981\"}")
+                .replace("\"source\"", "\"debug\":true,\"source\"");
 
         assertThatThrownBy(() -> v1.validate(MAPPER.readTree(event))).isInstanceOf(ValidationException.class);
     }

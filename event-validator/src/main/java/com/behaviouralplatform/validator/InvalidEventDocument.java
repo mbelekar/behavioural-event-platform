@@ -8,8 +8,7 @@ import java.util.List;
 /** The behavioural.invalid record (Design.md section 9). */
 final class InvalidEventDocument {
 
-    private InvalidEventDocument() {
-    }
+    private InvalidEventDocument() {}
 
     static ObjectNode of(JsonNode event, List<ValidationError> errors, Instant validatedAt) {
         ObjectNode document = Json.MAPPER.createObjectNode();

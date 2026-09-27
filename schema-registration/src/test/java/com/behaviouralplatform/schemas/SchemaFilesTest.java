@@ -16,25 +16,28 @@ class SchemaFilesTest {
     void loadsEnvelopeFirstThenSubjectsAlphabeticallyWithVersionsAscending() throws Exception {
         List<SchemaFile> files = SchemaFiles.load(SCHEMAS);
 
-        assertThat(files).extracting(SchemaFile::subject, SchemaFile::version).containsExactly(
-                tuple("behavioural_envelope", 1),
-                tuple("button_clicked", 1),
-                tuple("checkout_started", 1),
-                tuple("page_viewed", 1),
-                tuple("product_viewed", 1),
-                tuple("product_viewed", 2),
-                tuple("purchase_completed", 1),
-                tuple("search_performed", 1));
+        assertThat(files)
+                .extracting(SchemaFile::subject, SchemaFile::version)
+                .containsExactly(
+                        tuple("behavioural_envelope", 1),
+                        tuple("button_clicked", 1),
+                        tuple("checkout_started", 1),
+                        tuple("page_viewed", 1),
+                        tuple("product_viewed", 1),
+                        tuple("product_viewed", 2),
+                        tuple("purchase_completed", 1),
+                        tuple("search_performed", 1));
     }
 
     @Test
     void derivesEnvelopeReferenceFromRefName() throws Exception {
         SchemaFile productViewed = SchemaFiles.load(SCHEMAS).stream()
                 .filter(f -> f.subject().equals("product_viewed") && f.version() == 1)
-                .findFirst().orElseThrow();
+                .findFirst()
+                .orElseThrow();
 
-        assertThat(productViewed.references()).containsExactly(
-                new SchemaReference("behavioural_envelope/v1.json", "behavioural_envelope", 1));
+        assertThat(productViewed.references())
+                .containsExactly(new SchemaReference("behavioural_envelope/v1.json", "behavioural_envelope", 1));
     }
 
     @Test

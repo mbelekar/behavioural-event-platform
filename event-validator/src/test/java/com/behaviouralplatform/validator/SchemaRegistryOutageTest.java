@@ -60,23 +60,32 @@ class SchemaRegistryOutageTest {
             KafkaTopics.send(KAFKA.getBootstrapServers(), "behavioural.raw", "user-123", raw);
 
             assertThat(KafkaTopics.recordsContaining(
-                    KAFKA.getBootstrapServers(), ValidatedEventPublisher.INVALID_TOPIC, eventId, Duration.ofSeconds(15)))
-                    .as("an unavailable registry must never produce an invalid event").isEmpty();
+                            KAFKA.getBootstrapServers(),
+                            ValidatedEventPublisher.INVALID_TOPIC,
+                            eventId,
+                            Duration.ofSeconds(15)))
+                    .as("an unavailable registry must never produce an invalid event")
+                    .isEmpty();
         } finally {
             docker.unpauseContainerCmd(SCHEMA_REGISTRY.getContainerId()).exec();
         }
 
-        KafkaTopics.awaitRecord(KAFKA.getBootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, Duration.ofSeconds(60));
+        KafkaTopics.awaitRecord(
+                KAFKA.getBootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, Duration.ofSeconds(60));
         assertThat(output.getOut())
                 .as("each failed attempt is visible at WARN, naming the record and the cause")
-                .containsPattern("WARN .*Retrying behavioural\\.raw-\\d+@\\d+ key=user-123 \\(attempt \\d+\\): .*SchemaRegistryUnavailableException");
+                .containsPattern(
+                        "WARN .*Retrying behavioural\\.raw-\\d+@\\d+ key=user-123 \\(attempt \\d+\\): .*SchemaRegistryUnavailableException");
     }
 
     @Test
     void otherPartitionsKeepFlowingWhileOneRecordWaits(CapturedOutput output) throws Exception {
         String bootstrap = KAFKA.getBootstrapServers();
         String warmId = ValidatorTestEvents.uniqueEventId();
-        KafkaTopics.send(bootstrap, "behavioural.raw", "warm-user",
+        KafkaTopics.send(
+                bootstrap,
+                "behavioural.raw",
+                "warm-user",
                 ValidatorTestEvents.json(warmId, "page_viewed", 1, "{\"pageUrl\":\"https://shop.example/home\"}"));
         KafkaTopics.awaitRecord(bootstrap, ValidatedEventPublisher.VALID_TOPIC, warmId, Duration.ofSeconds(30));
 
@@ -88,13 +97,20 @@ class SchemaRegistryOutageTest {
 
         docker.pauseContainerCmd(SCHEMA_REGISTRY.getContainerId()).exec();
         try {
-            KafkaTopics.send(bootstrap, "behavioural.raw", stuckKey,
+            KafkaTopics.send(
+                    bootstrap,
+                    "behavioural.raw",
+                    stuckKey,
                     ValidatorTestEvents.json(stuckId, "checkout_started", 1, "{\"cartId\":\"cart-1\"}"));
             awaitOutput(output, "key=" + stuckKey, Duration.ofSeconds(30));
 
             long sentAt = System.currentTimeMillis();
-            KafkaTopics.send(bootstrap, "behavioural.raw", flowingKey,
-                    ValidatorTestEvents.json(flowingId, "page_viewed", 1, "{\"pageUrl\":\"https://shop.example/cart\"}"));
+            KafkaTopics.send(
+                    bootstrap,
+                    "behavioural.raw",
+                    flowingKey,
+                    ValidatorTestEvents.json(
+                            flowingId, "page_viewed", 1, "{\"pageUrl\":\"https://shop.example/cart\"}"));
 
             ConsumerRecord<String, byte[]> flowing = KafkaTopics.awaitRecord(
                     bootstrap, ValidatedEventPublisher.VALID_TOPIC, flowingId, Duration.ofSeconds(30));

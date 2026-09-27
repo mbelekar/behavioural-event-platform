@@ -23,11 +23,17 @@ class SchemaRegistrationTest {
         List<SchemaRegistration.Registered> again =
                 SchemaRegistration.register(client, SchemaRegistryContainers.schemasDir());
 
-        assertThat(again).extracting(SchemaRegistration.Registered::subject, SchemaRegistration.Registered::version)
+        assertThat(again)
+                .extracting(SchemaRegistration.Registered::subject, SchemaRegistration.Registered::version)
                 .containsExactly(
-                        tuple("behavioural_envelope", 1), tuple("button_clicked", 1), tuple("checkout_started", 1),
-                        tuple("page_viewed", 1), tuple("product_viewed", 1), tuple("product_viewed", 2),
-                        tuple("purchase_completed", 1), tuple("search_performed", 1));
+                        tuple("behavioural_envelope", 1),
+                        tuple("button_clicked", 1),
+                        tuple("checkout_started", 1),
+                        tuple("page_viewed", 1),
+                        tuple("product_viewed", 1),
+                        tuple("product_viewed", 2),
+                        tuple("purchase_completed", 1),
+                        tuple("search_performed", 1));
         assertThat(client.getAllVersions("product_viewed")).containsExactly(1, 2);
         assertThat(client.getCompatibility("product_viewed")).isEqualTo("BACKWARD");
     }
@@ -36,20 +42,30 @@ class SchemaRegistrationTest {
     void rejectsIncompatibleChanges() throws Exception {
         SchemaRegistryClient client = SharedSchemaRegistry.client();
         List<SchemaFile> all = SchemaFiles.load(SchemaRegistryContainers.schemasDir());
-        SchemaFile v2 = all.stream().filter(f -> f.subject().equals("product_viewed") && f.version() == 2).findFirst().orElseThrow();
-        String changedType = v2.content().replace(
-                "\"recommendationSource\": { \"type\": \"string\" }", "\"recommendationSource\": { \"type\": \"integer\" }");
-        String newRequired = v2.content().replace("\"required\": [\"productId\"]", "\"required\": [\"productId\", \"category\"]");
+        SchemaFile v2 = all.stream()
+                .filter(f -> f.subject().equals("product_viewed") && f.version() == 2)
+                .findFirst()
+                .orElseThrow();
+        String changedType = v2.content()
+                .replace(
+                        "\"recommendationSource\": { \"type\": \"string\" }",
+                        "\"recommendationSource\": { \"type\": \"integer\" }");
+        String newRequired =
+                v2.content().replace("\"required\": [\"productId\"]", "\"required\": [\"productId\", \"category\"]");
         assertThat(changedType).isNotEqualTo(v2.content());
         assertThat(newRequired).isNotEqualTo(v2.content());
 
-        JsonSchema typeChange = SchemaFiles.toJsonSchema(new SchemaFile("product_viewed", 3, changedType, v2.references()), all);
-        JsonSchema requiredAdded = SchemaFiles.toJsonSchema(new SchemaFile("product_viewed", 3, newRequired, v2.references()), all);
+        JsonSchema typeChange =
+                SchemaFiles.toJsonSchema(new SchemaFile("product_viewed", 3, changedType, v2.references()), all);
+        JsonSchema requiredAdded =
+                SchemaFiles.toJsonSchema(new SchemaFile("product_viewed", 3, newRequired, v2.references()), all);
 
         assertThat(client.testCompatibility("product_viewed", typeChange)).isFalse();
         assertThat(client.testCompatibility("product_viewed", requiredAdded)).isFalse();
         assertThatThrownBy(() -> client.register("product_viewed", typeChange))
-                .isInstanceOfSatisfying(RestClientException.class, e -> assertThat(e.getStatus()).isEqualTo(409));
+                .isInstanceOfSatisfying(
+                        RestClientException.class,
+                        e -> assertThat(e.getStatus()).isEqualTo(409));
     }
 
     @Test
@@ -57,9 +73,13 @@ class SchemaRegistrationTest {
         SchemaRegistryClient client = SharedSchemaRegistry.client();
         // Closed content model, so v1.json is a compatible change that the registry accepts as version 2.
         String subject = "gap_test_" + UUID.randomUUID().toString().replace("-", "");
-        client.register(subject, new JsonSchema("{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"}},\"additionalProperties\":false}"));
+        client.register(
+                subject,
+                new JsonSchema(
+                        "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"}},\"additionalProperties\":false}"));
         Files.createDirectories(dir.resolve(subject));
-        Files.writeString(dir.resolve(subject).resolve("v1.json"),
+        Files.writeString(
+                dir.resolve(subject).resolve("v1.json"),
                 "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"},\"b\":{\"type\":\"string\"}},\"additionalProperties\":false}");
 
         assertThatThrownBy(() -> SchemaRegistration.register(client, dir))
@@ -74,9 +94,11 @@ class SchemaRegistrationTest {
         SchemaRegistryClient client = SharedSchemaRegistry.client();
         String subject = "skip_test_" + UUID.randomUUID().toString().replace("-", "");
         Files.createDirectories(dir.resolve(subject));
-        Files.writeString(dir.resolve(subject).resolve("v1.json"),
+        Files.writeString(
+                dir.resolve(subject).resolve("v1.json"),
                 "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"}},\"additionalProperties\":false}");
-        Files.writeString(dir.resolve(subject).resolve("v3.json"),
+        Files.writeString(
+                dir.resolve(subject).resolve("v3.json"),
                 "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"},\"b\":{\"type\":\"string\"}},\"additionalProperties\":false}");
 
         assertThatThrownBy(() -> SchemaRegistration.register(client, dir))

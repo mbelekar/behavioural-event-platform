@@ -21,8 +21,7 @@ public final class SharedSchemaRegistry {
     /** A failed start is not retried: later callers get the original error instead of half-started containers. */
     private static IllegalStateException startFailure;
 
-    private SharedSchemaRegistry() {
-    }
+    private SharedSchemaRegistry() {}
 
     public static synchronized void start() {
         if (started) {

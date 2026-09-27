@@ -7,8 +7,7 @@ import java.util.UUID;
 /** Adds platform-owned metadata. Client-supplied values other than receivedAt are never changed. */
 final class PlatformMetadata {
 
-    private PlatformMetadata() {
-    }
+    private PlatformMetadata() {}
 
     static BehaviouralEvent apply(BehaviouralEvent event, String headerCorrelationId, Instant receivedAt) {
         String correlationId = event.correlationId();

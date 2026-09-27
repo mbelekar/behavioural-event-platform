@@ -23,13 +23,15 @@ import org.apache.kafka.common.serialization.StringSerializer;
 /** Small Kafka helpers for tests. Records are matched by a substring (usually a unique eventId). */
 public final class KafkaTopics {
 
-    private KafkaTopics() {
-    }
+    private KafkaTopics() {}
 
     public static void create(String bootstrapServers, List<String> topics) {
         try (Admin admin = Admin.create(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers))) {
-            admin.createTopics(topics.stream().map(t -> new NewTopic(t, 6, (short) 1)).toList())
-                    .all().get(30, TimeUnit.SECONDS);
+            admin.createTopics(topics.stream()
+                            .map(t -> new NewTopic(t, 6, (short) 1))
+                            .toList())
+                    .all()
+                    .get(30, TimeUnit.SECONDS);
         } catch (Exception e) {
             throw new IllegalStateException("Could not create topics " + topics, e);
         }
@@ -64,11 +66,16 @@ public final class KafkaTopics {
     private static List<ConsumerRecord<String, byte[]>> poll(
             String bootstrapServers, String topic, String containing, Duration duration, boolean stopAtFirst) {
         Map<String, Object> config = Map.of(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
-                ConsumerConfig.GROUP_ID_CONFIG, "test-" + UUID.randomUUID(),
-                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                bootstrapServers,
+                ConsumerConfig.GROUP_ID_CONFIG,
+                "test-" + UUID.randomUUID(),
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+                "earliest",
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                ByteArrayDeserializer.class);
         List<ConsumerRecord<String, byte[]>> found = new ArrayList<>();
         try (var consumer = new KafkaConsumer<String, byte[]>(config)) {
             consumer.subscribe(List.of(topic));

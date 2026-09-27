@@ -22,18 +22,19 @@ public final class SchemaFiles {
     private static final Pattern VERSION_FILE = Pattern.compile("v(\\d+)\\.json");
     /** {@code "$ref": "<subject>/v<N>.json"} — the name carries the referenced subject and version. */
     private static final Pattern REF = Pattern.compile("\"\\$ref\"\\s*:\\s*\"(([a-z_]+)/v(\\d+)\\.json)\"");
-    private static final Comparator<Path> ENVELOPE_FIRST = Comparator
-            .comparing((Path p) -> !p.getFileName().toString().equals(ENVELOPE_SUBJECT))
+
+    private static final Comparator<Path> ENVELOPE_FIRST = Comparator.comparing(
+                    (Path p) -> !p.getFileName().toString().equals(ENVELOPE_SUBJECT))
             .thenComparing(p -> p.getFileName().toString());
 
-    private SchemaFiles() {
-    }
+    private SchemaFiles() {}
 
     /** All schema files: envelope first, then subjects alphabetically, versions ascending. */
     public static List<SchemaFile> load(Path dir) throws IOException {
         List<SchemaFile> files = new ArrayList<>();
         try (Stream<Path> subjects = Files.list(dir)) {
-            for (Path subjectDir : subjects.filter(Files::isDirectory).sorted(ENVELOPE_FIRST).toList()) {
+            for (Path subjectDir :
+                    subjects.filter(Files::isDirectory).sorted(ENVELOPE_FIRST).toList()) {
                 files.addAll(loadSubject(subjectDir));
             }
         }
@@ -48,7 +49,8 @@ public final class SchemaFiles {
                 Matcher name = VERSION_FILE.matcher(path.getFileName().toString());
                 if (name.matches()) {
                     String content = Files.readString(path);
-                    versions.add(new SchemaFile(subject, Integer.parseInt(name.group(1)), content, references(content)));
+                    versions.add(
+                            new SchemaFile(subject, Integer.parseInt(name.group(1)), content, references(content)));
                 }
             }
         }
@@ -72,8 +74,8 @@ public final class SchemaFiles {
             SchemaFile target = all.stream()
                     .filter(f -> f.subject().equals(reference.getSubject()) && f.version() == reference.getVersion())
                     .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            file.subject() + "/v" + file.version() + ".json references missing " + reference.getName()));
+                    .orElseThrow(() -> new IllegalArgumentException(file.subject() + "/v" + file.version()
+                            + ".json references missing " + reference.getName()));
             resolved.put(reference.getName(), target.content());
         }
         return new JsonSchema(file.content(), file.references(), resolved, null);

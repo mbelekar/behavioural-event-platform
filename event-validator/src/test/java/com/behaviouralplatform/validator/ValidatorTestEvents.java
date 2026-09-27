@@ -7,8 +7,7 @@ import java.util.UUID;
 /** Events shaped exactly like the collector writes them to behavioural.raw. */
 final class ValidatorTestEvents {
 
-    private ValidatorTestEvents() {
-    }
+    private ValidatorTestEvents() {}
 
     static String uniqueEventId() {
         return "evt-" + UUID.randomUUID();
@@ -23,7 +22,8 @@ final class ValidatorTestEvents {
     }
 
     static ObjectNode productViewedV2() {
-        return node(json(uniqueEventId(), "product_viewed", 2, "{\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}"));
+        return node(json(
+                uniqueEventId(), "product_viewed", 2, "{\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}"));
     }
 
     static ObjectNode node(String json) {

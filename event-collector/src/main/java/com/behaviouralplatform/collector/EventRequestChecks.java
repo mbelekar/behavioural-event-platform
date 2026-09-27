@@ -7,8 +7,7 @@ import java.util.List;
 /** Minimal shape checks done at ingestion. Schema and business validation belong to the validator. */
 final class EventRequestChecks {
 
-    private EventRequestChecks() {
-    }
+    private EventRequestChecks() {}
 
     static List<String> missingFields(BehaviouralEvent event) {
         List<String> missing = new ArrayList<>();

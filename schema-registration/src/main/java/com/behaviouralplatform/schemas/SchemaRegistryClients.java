@@ -8,8 +8,7 @@ import java.util.Map;
 
 public final class SchemaRegistryClients {
 
-    private SchemaRegistryClients() {
-    }
+    private SchemaRegistryClients() {}
 
     public static SchemaRegistryClient forUrl(String url) {
         return new CachedSchemaRegistryClient(List.of(url), 100, List.of(new JsonSchemaProvider()), Map.of());

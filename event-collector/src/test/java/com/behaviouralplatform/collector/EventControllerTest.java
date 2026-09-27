@@ -95,7 +95,8 @@ class EventControllerTest {
     @Test
     void returnsServiceUnavailableWhenPublishFails() throws Exception {
         doThrow(new PublishFailedException("01K5R4F8W8J5Z8XJH0N6F4P2C1", new RuntimeException("broker down")))
-                .when(publisher).publish(any());
+                .when(publisher)
+                .publish(any());
 
         mvc.perform(post("/v1/events").contentType(APPLICATION_JSON).content(TestEvents.VALID_JSON))
                 .andExpect(problem(503));
@@ -104,7 +105,8 @@ class EventControllerTest {
     @Test
     void returnsPayloadTooLargeWhenKafkaRejectsTheEventSize() throws Exception {
         doThrow(new EventTooLargeException("01K5R4F8W8J5Z8XJH0N6F4P2C1", new RuntimeException("record too large")))
-                .when(publisher).publish(any());
+                .when(publisher)
+                .publish(any());
 
         mvc.perform(post("/v1/events").contentType(APPLICATION_JSON).content(TestEvents.VALID_JSON))
                 .andExpect(problem(413));

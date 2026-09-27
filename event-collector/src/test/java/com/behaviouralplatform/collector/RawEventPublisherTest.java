@@ -40,16 +40,22 @@ class RawEventPublisherTest {
     @Test
     void failsWithinBoundWhenBrokerUnreachable() {
         Map<String, Object> config = Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:1",
-                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
-                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
-                ProducerConfig.MAX_BLOCK_MS_CONFIG, 1000);
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                "localhost:1",
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class,
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class,
+                ProducerConfig.MAX_BLOCK_MS_CONFIG,
+                1000);
         var producerFactory = new DefaultKafkaProducerFactory<String, String>(config);
-        var publisher = new RawEventPublisher(new KafkaTemplate<>(producerFactory), JsonMapper.builder().build());
+        var publisher = new RawEventPublisher(
+                new KafkaTemplate<>(producerFactory), JsonMapper.builder().build());
 
         try {
-            assertTimeoutPreemptively(Duration.ofSeconds(10), () ->
-                    assertThatThrownBy(() -> publisher.publish(TestEvents.valid()))
+            assertTimeoutPreemptively(
+                    Duration.ofSeconds(10),
+                    () -> assertThatThrownBy(() -> publisher.publish(TestEvents.valid()))
                             .isInstanceOf(PublishFailedException.class)
                             .hasMessageContaining("01K5R4F8W8J5Z8XJH0N6F4P2C1"));
         } finally {

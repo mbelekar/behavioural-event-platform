@@ -7,10 +7,13 @@ final class SchemaRegistryWireFormat {
 
     private static final byte MAGIC_BYTE = 0;
 
-    private SchemaRegistryWireFormat() {
-    }
+    private SchemaRegistryWireFormat() {}
 
     static byte[] frame(int schemaId, byte[] json) {
-        return ByteBuffer.allocate(5 + json.length).put(MAGIC_BYTE).putInt(schemaId).put(json).array();
+        return ByteBuffer.allocate(5 + json.length)
+                .put(MAGIC_BYTE)
+                .putInt(schemaId)
+                .put(json)
+                .array();
     }
 }

@@ -2,6 +2,7 @@
 spring-boot = "4.1.1"
 spring-dependency-management = "1.1.7"
 confluent = "8.3.2"
+palantir-java-format = "2.99.0"
 
 [libraries]
 spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
@@ -24,3 +25,4 @@ kafka-clients = { module = "org.apache.kafka:kafka-clients" }
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
+spotless = { id = "com.diffplug.spotless", version = "8.10.3" }

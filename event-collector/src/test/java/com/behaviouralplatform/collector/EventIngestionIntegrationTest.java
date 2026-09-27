@@ -68,18 +68,24 @@ class EventIngestionIntegrationTest {
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 
         assertThat(response.statusCode()).isEqualTo(413);
-        assertThat(response.headers().firstValue("Content-Type")).hasValueSatisfying(
-                contentType -> assertThat(contentType).startsWith("application/problem+json"));
-        assertThat(countRecordsContaining(RawEventPublisher.TOPIC, eventId, Duration.ofSeconds(5))).isZero();
+        assertThat(response.headers().firstValue("Content-Type"))
+                .hasValueSatisfying(contentType -> assertThat(contentType).startsWith("application/problem+json"));
+        assertThat(countRecordsContaining(RawEventPublisher.TOPIC, eventId, Duration.ofSeconds(5)))
+                .isZero();
     }
 
     private int countRecordsContaining(String topic, String text, Duration pollFor) {
         Map<String, Object> config = Map.of(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers(),
-                ConsumerConfig.GROUP_ID_CONFIG, "it-" + UUID.randomUUID(),
-                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                kafka.getBootstrapServers(),
+                ConsumerConfig.GROUP_ID_CONFIG,
+                "it-" + UUID.randomUUID(),
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+                "earliest",
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class);
         int count = 0;
         try (var consumer = new KafkaConsumer<String, String>(config)) {
             consumer.subscribe(List.of(topic));
@@ -97,11 +103,16 @@ class EventIngestionIntegrationTest {
 
     private ConsumerRecord<String, String> readSingleRecord(String topic) {
         Map<String, Object> config = Map.of(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers(),
-                ConsumerConfig.GROUP_ID_CONFIG, "it-" + UUID.randomUUID(),
-                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                kafka.getBootstrapServers(),
+                ConsumerConfig.GROUP_ID_CONFIG,
+                "it-" + UUID.randomUUID(),
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+                "earliest",
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class);
         try (var consumer = new KafkaConsumer<String, String>(config)) {
             consumer.subscribe(List.of(topic));
             ConsumerRecords<String, String> records = ConsumerRecords.empty();

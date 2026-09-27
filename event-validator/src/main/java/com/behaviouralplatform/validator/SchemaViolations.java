@@ -12,8 +12,7 @@ final class SchemaViolations {
     /** "required key [productId] not found", "extraneous key [debug] is not permitted" */
     private static final Pattern BRACKETED = Pattern.compile("\\[(.+?)]");
 
-    private SchemaViolations() {
-    }
+    private SchemaViolations() {}
 
     static List<ValidationError> toErrors(ValidationException root) {
         List<ValidationError> errors = new ArrayList<>();
@@ -29,18 +28,23 @@ final class SchemaViolations {
         String path = toPath(e.getPointerToViolation());
         String keyword = e.getKeyword() == null ? "" : e.getKeyword();
         String message = e.getErrorMessage().isBlank() ? "violates '" + keyword + "'" : e.getErrorMessage();
-        errors.add(switch (keyword) {
-            case "required" -> new ValidationError("REQUIRED_FIELD_MISSING", child(path, bracketed(message)), message);
-            case "additionalProperties" -> new ValidationError("UNKNOWN_FIELD", child(path, bracketed(message)), message);
-            case "type" -> new ValidationError("INVALID_TYPE", path, message);
-            case "format" -> new ValidationError("INVALID_FORMAT", path, message);
-            default -> new ValidationError("SCHEMA_VIOLATION", path, message);
-        });
+        errors.add(
+                switch (keyword) {
+                    case "required" ->
+                        new ValidationError("REQUIRED_FIELD_MISSING", child(path, bracketed(message)), message);
+                    case "additionalProperties" ->
+                        new ValidationError("UNKNOWN_FIELD", child(path, bracketed(message)), message);
+                    case "type" -> new ValidationError("INVALID_TYPE", path, message);
+                    case "format" -> new ValidationError("INVALID_FORMAT", path, message);
+                    default -> new ValidationError("SCHEMA_VIOLATION", path, message);
+                });
     }
 
     /** "#/payload/productId" → "payload.productId"; "#" → "". */
     static String toPath(String pointer) {
-        return pointer == null || pointer.equals("#") ? "" : pointer.substring(2).replace('/', '.');
+        return pointer == null || pointer.equals("#")
+                ? ""
+                : pointer.substring(2).replace('/', '.');
     }
 
     private static String child(String parent, String name) {

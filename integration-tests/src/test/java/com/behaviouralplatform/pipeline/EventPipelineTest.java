@@ -34,12 +34,16 @@ class EventPipelineTest {
         try (ServerSocket socket = new ServerSocket(0)) {
             collectorPort = socket.getLocalPort();
         }
-        collector = ServiceProcess.start("event-collector", Map.of(
-                "KAFKA_BOOTSTRAP_SERVERS", SharedSchemaRegistry.bootstrapServers(),
-                "SERVER_PORT", String.valueOf(collectorPort)));
-        validator = ServiceProcess.start("event-validator", Map.of(
-                "KAFKA_BOOTSTRAP_SERVERS", SharedSchemaRegistry.bootstrapServers(),
-                "SCHEMA_REGISTRY_URL", SharedSchemaRegistry.schemaRegistryUrl()));
+        collector = ServiceProcess.start(
+                "event-collector",
+                Map.of(
+                        "KAFKA_BOOTSTRAP_SERVERS", SharedSchemaRegistry.bootstrapServers(),
+                        "SERVER_PORT", String.valueOf(collectorPort)));
+        validator = ServiceProcess.start(
+                "event-validator",
+                Map.of(
+                        "KAFKA_BOOTSTRAP_SERVERS", SharedSchemaRegistry.bootstrapServers(),
+                        "SCHEMA_REGISTRY_URL", SharedSchemaRegistry.schemaRegistryUrl()));
         awaitCollector();
     }
 
@@ -53,12 +57,15 @@ class EventPipelineTest {
     void validEventFlowsFromHttpToTheTrustedTopic() throws Exception {
         String eventId = "pipeline-" + UUID.randomUUID();
 
-        assertThat(post(event(eventId, "{\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}"))).isEqualTo(202);
+        assertThat(post(event(eventId, "{\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}")))
+                .isEqualTo(202);
 
-        ConsumerRecord<String, byte[]> record = KafkaTopics.awaitRecord(
-                SharedSchemaRegistry.bootstrapServers(), "behavioural.valid", eventId, TIMEOUT);
+        ConsumerRecord<String, byte[]> record =
+                KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), "behavioural.valid", eventId, TIMEOUT);
         assertThat(record.key()).isEqualTo("user-123");
-        assertThat(new String(record.value(), StandardCharsets.UTF_8)).contains("\"correlationId\"").contains("\"receivedAt\"");
+        assertThat(new String(record.value(), StandardCharsets.UTF_8))
+                .contains("\"correlationId\"")
+                .contains("\"receivedAt\"");
     }
 
     @Test
@@ -70,7 +77,8 @@ class EventPipelineTest {
         ConsumerRecord<String, byte[]> record = KafkaTopics.awaitRecord(
                 SharedSchemaRegistry.bootstrapServers(), "behavioural.invalid", eventId, TIMEOUT);
         assertThat(new String(record.value(), StandardCharsets.UTF_8))
-                .contains("\"code\":\"REQUIRED_FIELD_MISSING\"").contains("\"field\":\"payload.productId\"");
+                .contains("\"code\":\"REQUIRED_FIELD_MISSING\"")
+                .contains("\"field\":\"payload.productId\"");
     }
 
     private static String event(String eventId, String payload) {
@@ -92,7 +100,9 @@ class EventPipelineTest {
         long deadline = System.nanoTime() + TIMEOUT.toNanos();
         while (System.nanoTime() < deadline) {
             try {
-                HTTP.send(HttpRequest.newBuilder(URI.create("http://localhost:" + collectorPort + "/")).build(),
+                HTTP.send(
+                        HttpRequest.newBuilder(URI.create("http://localhost:" + collectorPort + "/"))
+                                .build(),
                         HttpResponse.BodyHandlers.discarding());
                 return;
             } catch (ConnectException e) {

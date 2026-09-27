@@ -17,5 +17,4 @@ public record BehaviouralEvent(
         String sessionId,
         String correlationId,
         Instant receivedAt,
-        JsonNode payload) {
-}
+        JsonNode payload) {}

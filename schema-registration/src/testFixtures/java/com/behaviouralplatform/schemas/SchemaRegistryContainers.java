@@ -15,8 +15,7 @@ public final class SchemaRegistryContainers {
     public static final String KAFKA_IMAGE = "apache/kafka:4.2.1";
     public static final String SCHEMA_REGISTRY_IMAGE = "confluentinc/cp-schema-registry:8.3.2";
 
-    private SchemaRegistryContainers() {
-    }
+    private SchemaRegistryContainers() {}
 
     public static KafkaContainer kafka(Network network) {
         return new KafkaContainer(DockerImageName.parse(KAFKA_IMAGE))

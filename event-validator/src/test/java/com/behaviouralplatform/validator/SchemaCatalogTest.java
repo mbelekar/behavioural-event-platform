@@ -20,8 +20,10 @@ class SchemaCatalogTest {
 
         SchemaLookup lookup = new SchemaCatalog(client).find("product_viewed", 2);
 
-        assertThat(lookup).isInstanceOfSatisfying(SchemaLookup.Found.class, found ->
-                assertThat(found.schemaId()).isEqualTo(expectedId));
+        assertThat(lookup)
+                .isInstanceOfSatisfying(
+                        SchemaLookup.Found.class,
+                        found -> assertThat(found.schemaId()).isEqualTo(expectedId));
     }
 
     @Test

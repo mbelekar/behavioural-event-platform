@@ -45,9 +45,12 @@ class EventValidator {
         }
         return switch (catalog.find(type, version)) {
             case SchemaLookup.UnknownEventType unknown ->
-                    failed("UNKNOWN_EVENT_TYPE", "eventType", "No schema is registered for event type " + type);
+                failed("UNKNOWN_EVENT_TYPE", "eventType", "No schema is registered for event type " + type);
             case SchemaLookup.UnknownSchemaVersion unknown ->
-                    failed("UNKNOWN_SCHEMA_VERSION", "schemaVersion", "No version " + version + " is registered for " + type);
+                failed(
+                        "UNKNOWN_SCHEMA_VERSION",
+                        "schemaVersion",
+                        "No version " + version + " is registered for " + type);
             case SchemaLookup.Found found -> validateAgainst(found, event);
         };
     }

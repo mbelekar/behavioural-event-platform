@@ -29,7 +29,10 @@ class ValidatedEventPublisher {
 
     void publishInvalid(String key, JsonNode event, List<ValidationError> errors) {
         try {
-            send(INVALID_TOPIC, key, Json.MAPPER.writeValueAsBytes(InvalidEventDocument.of(event, errors, Instant.now())));
+            send(
+                    INVALID_TOPIC,
+                    key,
+                    Json.MAPPER.writeValueAsBytes(InvalidEventDocument.of(event, errors, Instant.now())));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Could not serialize invalid event document", e);
         }

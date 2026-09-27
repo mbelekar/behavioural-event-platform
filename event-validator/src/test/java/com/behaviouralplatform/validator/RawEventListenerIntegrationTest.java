@@ -31,7 +31,8 @@ class RawEventListenerIntegrationTest {
     @Test
     void validEventIsRepublishedInWireFormatWithSameKey() throws Exception {
         String eventId = ValidatorTestEvents.uniqueEventId();
-        String raw = ValidatorTestEvents.json(eventId, "product_viewed", 2, "{\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}");
+        String raw = ValidatorTestEvents.json(
+                eventId, "product_viewed", 2, "{\"productId\":\"SKU-981\",\"recommendationSource\":\"home\"}");
 
         KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "user-123", raw);
 
@@ -39,11 +40,16 @@ class RawEventListenerIntegrationTest {
                 SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, TIMEOUT);
         assertThat(record.key()).isEqualTo("user-123");
         assertThat(ByteBuffer.wrap(record.value(), 1, 4).getInt())
-                .isEqualTo(SharedSchemaRegistry.client().getSchemaMetadata("product_viewed", 2).getId());
+                .isEqualTo(SharedSchemaRegistry.client()
+                        .getSchemaMetadata("product_viewed", 2)
+                        .getId());
         try (var deserializer = new KafkaJsonSchemaDeserializer<JsonNode>()) {
-            deserializer.configure(Map.of(
-                    AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, SharedSchemaRegistry.schemaRegistryUrl(),
-                    KafkaJsonSchemaDeserializerConfig.JSON_VALUE_TYPE, JsonNode.class.getName()), false);
+            deserializer.configure(
+                    Map.of(
+                            AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
+                                    SharedSchemaRegistry.schemaRegistryUrl(),
+                            KafkaJsonSchemaDeserializerConfig.JSON_VALUE_TYPE, JsonNode.class.getName()),
+                    false);
             JsonNode read = deserializer.deserialize(ValidatedEventPublisher.VALID_TOPIC, record.value());
             assertThat(read).isEqualTo(Json.MAPPER.readTree(raw));
         }
@@ -62,7 +68,8 @@ class RawEventListenerIntegrationTest {
         JsonNode document = Json.MAPPER.readTree(record.value());
         assertThat(document.get("event")).isEqualTo(Json.MAPPER.readTree(raw));
         assertThat(document.get("validationErrors").get(0).get("code").asText()).isEqualTo("REQUIRED_FIELD_MISSING");
-        assertThat(document.get("validationErrors").get(0).get("field").asText()).isEqualTo("payload.productId");
+        assertThat(document.get("validationErrors").get(0).get("field").asText())
+                .isEqualTo("payload.productId");
         assertThat(document.hasNonNull("validatedAt")).isTrue();
     }
 
@@ -73,7 +80,8 @@ class RawEventListenerIntegrationTest {
 
         KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "user-123", raw);
 
-        KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, TIMEOUT);
+        KafkaTopics.awaitRecord(
+                SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, TIMEOUT);
     }
 
     @Test

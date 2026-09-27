@@ -19,11 +19,9 @@ public final class SchemaRegistration {
     private static final int SUBJECT_NOT_FOUND = 40401;
     private static final int SCHEMA_NOT_FOUND = 40403;
 
-    private SchemaRegistration() {
-    }
+    private SchemaRegistration() {}
 
-    public record Registered(String subject, int version, int id) {
-    }
+    public record Registered(String subject, int version, int id) {}
 
     public static void main(String[] args) throws Exception {
         String url = args[0];
@@ -33,7 +31,8 @@ public final class SchemaRegistration {
         }
     }
 
-    public static List<Registered> register(SchemaRegistryClient client, Path dir) throws IOException, RestClientException {
+    public static List<Registered> register(SchemaRegistryClient client, Path dir)
+            throws IOException, RestClientException {
         List<SchemaFile> files = SchemaFiles.load(dir);
         List<Registered> registered = new ArrayList<>();
         for (SchemaFile file : files) {
@@ -50,8 +49,14 @@ public final class SchemaRegistration {
             } else {
                 int latest = latestVersion(client, file.subject());
                 if (latest != file.version() - 1) {
-                    throw new IllegalStateException("%s/v%d.json cannot be registered: the registry's latest version of %s is %d, expected %d"
-                            .formatted(file.subject(), file.version(), file.subject(), latest, file.version() - 1));
+                    throw new IllegalStateException(
+                            "%s/v%d.json cannot be registered: the registry's latest version of %s is %d, expected %d"
+                                    .formatted(
+                                            file.subject(),
+                                            file.version(),
+                                            file.subject(),
+                                            latest,
+                                            file.version() - 1));
                 }
                 id = client.register(file.subject(), schema);
             }
@@ -74,7 +79,8 @@ public final class SchemaRegistration {
     }
 
     /** The subject's latest version, or 0 if the subject doesn't exist yet. */
-    private static int latestVersion(SchemaRegistryClient client, String subject) throws IOException, RestClientException {
+    private static int latestVersion(SchemaRegistryClient client, String subject)
+            throws IOException, RestClientException {
         try {
             return client.getLatestSchemaMetadata(subject).getVersion();
         } catch (RestClientException e) {

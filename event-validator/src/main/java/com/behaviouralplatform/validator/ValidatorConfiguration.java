@@ -25,10 +25,14 @@ class ValidatorConfiguration {
      */
     @Bean
     SchemaRegistryClient schemaRegistryClient(@Value("${validator.schema-registry.url}") String url) {
-        return new CachedSchemaRegistryClient(List.of(url), 1000, List.of(new JsonSchemaProvider()), Map.of(
-                SchemaRegistryClientConfig.HTTP_CONNECT_TIMEOUT_MS, 5000,
-                SchemaRegistryClientConfig.HTTP_READ_TIMEOUT_MS, 5000,
-                SchemaRegistryClientConfig.MAX_RETRIES_CONFIG, 0));
+        return new CachedSchemaRegistryClient(
+                List.of(url),
+                1000,
+                List.of(new JsonSchemaProvider()),
+                Map.of(
+                        SchemaRegistryClientConfig.HTTP_CONNECT_TIMEOUT_MS, 5000,
+                        SchemaRegistryClientConfig.HTTP_READ_TIMEOUT_MS, 5000,
+                        SchemaRegistryClientConfig.MAX_RETRIES_CONFIG, 0));
     }
 
     /**
@@ -38,11 +42,17 @@ class ValidatorConfiguration {
      */
     @Bean
     DefaultErrorHandler kafkaErrorHandler() {
-        DefaultErrorHandler handler = new DefaultErrorHandler(new FixedBackOff(5_000L, FixedBackOff.UNLIMITED_ATTEMPTS));
+        DefaultErrorHandler handler =
+                new DefaultErrorHandler(new FixedBackOff(5_000L, FixedBackOff.UNLIMITED_ATTEMPTS));
         handler.defaultFalse();
         handler.addRetryableExceptions(SchemaRegistryUnavailableException.class, PublishFailedException.class);
-        handler.setRetryListeners((record, ex, attempt) -> log.warn("Retrying {}-{}@{} key={} (attempt {}): {}",
-                record.topic(), record.partition(), record.offset(), record.key(), attempt,
+        handler.setRetryListeners((record, ex, attempt) -> log.warn(
+                "Retrying {}-{}@{} key={} (attempt {}): {}",
+                record.topic(),
+                record.partition(),
+                record.offset(),
+                record.key(),
+                attempt,
                 String.valueOf(ex.getCause() == null ? ex : ex.getCause())));
         return handler;
     }
