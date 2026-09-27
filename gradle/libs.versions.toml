@@ -1,6 +1,7 @@
 [versions]
 spring-boot = "4.1.1"
 spring-dependency-management = "1.1.7"
+confluent = "8.3.2"
 
 [libraries]
 spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
@@ -15,6 +16,10 @@ spring-boot-starter-kafka-test = { module = "org.springframework.boot:spring-boo
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
 testcontainers-kafka = { module = "org.testcontainers:testcontainers-kafka" }
+schema-registry-client = { module = "io.confluent:kafka-schema-registry-client", version.ref = "confluent" }
+json-schema-provider = { module = "io.confluent:kafka-json-schema-provider", version.ref = "confluent" }
+json-schema-serializer = { module = "io.confluent:kafka-json-schema-serializer", version.ref = "confluent" }
+kafka-clients = { module = "org.apache.kafka:kafka-clients" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }

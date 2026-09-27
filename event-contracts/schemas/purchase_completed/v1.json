@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "purchase_completed",
+  "allOf": [
+    { "$ref": "behavioural_envelope/v1.json" },
+    {
+      "properties": {
+        "eventType": { "const": "purchase_completed" },
+        "payload": {
+          "type": "object",
+          "required": ["orderId", "amount", "currency"],
+          "properties": {
+            "orderId": { "type": "string", "minLength": 1 },
+            "amount": { "type": "number" },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

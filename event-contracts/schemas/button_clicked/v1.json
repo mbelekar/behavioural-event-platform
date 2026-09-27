@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "button_clicked",
+  "allOf": [
+    { "$ref": "behavioural_envelope/v1.json" },
+    {
+      "properties": {
+        "eventType": { "const": "button_clicked" },
+        "payload": {
+          "type": "object",
+          "required": ["buttonId"],
+          "properties": {
+            "buttonId": { "type": "string", "minLength": 1 },
+            "pageUrl": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "behavioural_envelope",
+  "type": "object",
+  "required": ["eventId", "eventType", "schemaVersion", "occurredAt", "source", "correlationId", "receivedAt", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "minLength": 1 },
+    "eventType": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "source": { "type": "string", "minLength": 1 },
+    "userId": { "type": ["string", "null"] },
+    "sessionId": { "type": ["string", "null"] },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "receivedAt": { "type": "string", "format": "date-time" },
+    "payload": { "type": "object" }
+  },
+  "additionalProperties": false
+}

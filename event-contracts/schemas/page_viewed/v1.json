@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "page_viewed",
+  "allOf": [
+    { "$ref": "behavioural_envelope/v1.json" },
+    {
+      "properties": {
+        "eventType": { "const": "page_viewed" },
+        "payload": {
+          "type": "object",
+          "required": ["pageUrl"],
+          "properties": {
+            "pageUrl": { "type": "string", "minLength": 1 },
+            "referrer": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}
