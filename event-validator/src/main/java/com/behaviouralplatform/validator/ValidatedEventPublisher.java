@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
+import org.apache.kafka.common.errors.RetriableException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -34,11 +35,27 @@ class ValidatedEventPublisher {
         }
     }
 
+    /**
+     * Failures Kafka marks as retriable (broker unavailable, timeouts) become PublishFailedException and are retried.
+     * Permanent ones (e.g. record too large) are rethrown as-is, so they are logged and skipped rather than retried forever.
+     */
     private void send(String topic, String key, byte[] value) {
         try {
             kafkaTemplate.send(topic, key, value).join();
         } catch (RuntimeException e) {
-            throw new PublishFailedException(topic, e);
+            if (isRetriable(e)) {
+                throw new PublishFailedException(topic, e);
+            }
+            throw e;
         }
+    }
+
+    private static boolean isRetriable(Throwable e) {
+        for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+            if (cause instanceof RetriableException) {
+                return true;
+            }
+        }
+        return false;
     }
 }
