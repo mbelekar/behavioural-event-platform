@@ -18,7 +18,7 @@ HTTP ingestion and asynchronous schema validation are implemented.
 | Valid / invalid event streams | ✅ Implemented |
 | Dead-letter topic (`validation.dlq`) | ✅ Implemented |
 | Business validation | ✅ Implemented |
-| Cross-cluster Event Router | 📋 Planned |
+| Cross-cluster Event Router | ⏸️ Deferred |
 | Observability (metrics, tracing, dashboards) | ⏸️ Deferred until productionisation |
 
 See [`docs/Design.md`](docs/Design.md) for the full design.
@@ -57,8 +57,8 @@ flowchart LR
     VALIDATOR -->|invalid| INVALID[(behavioural.invalid)]
     VALIDATOR -->|processing failure| DLQ[(validation.dlq)]
 
-    VALID -. planned .-> ROUTER[Event Router<br/>planned]
-    ROUTER -. planned .-> TARGET[(Kafka Cluster B)]
+    VALID -. deferred .-> ROUTER[Event Router<br/>deferred]
+    ROUTER -. deferred .-> TARGET[(Kafka Cluster B)]
 ```
 
 The collector writes to Kafka before acknowledging the request. Validation then happens asynchronously.
