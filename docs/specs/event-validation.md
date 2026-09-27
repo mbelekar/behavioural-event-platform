@@ -47,7 +47,7 @@ Turn untrusted events on `behavioural.raw` into a trusted stream. Events that co
   | `occurredAt` `"yesterday"` | `INVALID_FORMAT` | `occurredAt` |
   | `purchase_completed` `currency` `"usd"` | `SCHEMA_VIOLATION` | `payload.currency` |
 
-- **AC6.** An event produces a record on exactly one of `behavioural.valid` and `behavioural.invalid`.
+- **AC6.** An event produces a record on exactly one of `behavioural.valid`, `behavioural.invalid` and `validation.dlq` (see [validation resilience](validation-resilience.md)).
 
 ## Failure and edge cases
 

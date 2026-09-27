@@ -36,6 +36,9 @@ services:
           /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-a:19092 --create --if-not-exists \
             --topic "$$topic" --partitions 6 --replication-factor 1 || exit 1
         done
+        # validation.dlq keeps records until an operator deletes them (ADR 0011)
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-a:19092 --create --if-not-exists \
+          --topic validation.dlq --partitions 6 --replication-factor 1 --config retention.ms=-1
 
   schema-registry:
     image: confluentinc/cp-schema-registry:8.3.2

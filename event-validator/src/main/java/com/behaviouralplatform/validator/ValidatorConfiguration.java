@@ -6,16 +6,21 @@ import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig;
 import io.confluent.kafka.schemaregistry.json.JsonSchemaProvider;
 import java.util.List;
 import java.util.Map;
+import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.FixedBackOff;
 
 @Configuration(proxyBeanMethods = false)
 class ValidatorConfiguration {
+
+    static final String DLQ_TOPIC = "validation.dlq";
 
     private static final Logger log = LoggerFactory.getLogger(ValidatorConfiguration.class);
 
@@ -36,16 +41,32 @@ class ValidatorConfiguration {
     }
 
     /**
-     * Phase 2 interim (ADR 0008): infrastructure failures are retried every 5s, forever. The event waits; nothing is lost.
-     * Anything else is logged and skipped until Phase 3 adds bounded retries and validation.dlq.
+     * Infrastructure failures are retried every 5s, forever: the event waits and is never dead-lettered (ADR 0008).
+     * Anything else is retried twice, 1s apart, then the raw record goes to validation.dlq (ADR 0011). A failed
+     * dead-letter publish is retried from the first attempt, so nothing is skipped.
      * Each failed attempt is logged at WARN so an outage is visible, not only as consumer lag.
      */
     @Bean
-    DefaultErrorHandler kafkaErrorHandler() {
-        DefaultErrorHandler handler =
-                new DefaultErrorHandler(new FixedBackOff(5_000L, FixedBackOff.UNLIMITED_ATTEMPTS));
-        handler.defaultFalse();
-        handler.addRetryableExceptions(SchemaRegistryUnavailableException.class, PublishFailedException.class);
+    DefaultErrorHandler kafkaErrorHandler(KafkaTemplate<String, byte[]> kafkaTemplate) {
+        DeadLetterPublishingRecoverer deadLetter = new DeadLetterPublishingRecoverer(
+                kafkaTemplate, (record, ex) -> new TopicPartition(DLQ_TOPIC, record.partition()));
+        DefaultErrorHandler handler = new DefaultErrorHandler(
+                (record, ex) -> {
+                    deadLetter.accept(record, ex);
+                    log.error(
+                            "Dead-lettered {}-{}@{} key={} to {}: {}",
+                            record.topic(),
+                            record.partition(),
+                            record.offset(),
+                            record.key(),
+                            DLQ_TOPIC,
+                            String.valueOf(ex.getCause() == null ? ex : ex.getCause()));
+                },
+                new FixedBackOff(1_000L, 2));
+        handler.setBackOffFunction(
+                (record, ex) -> ex instanceof SchemaRegistryUnavailableException || ex instanceof PublishFailedException
+                        ? new FixedBackOff(5_000L, FixedBackOff.UNLIMITED_ATTEMPTS)
+                        : null);
         handler.setRetryListeners((record, ex, attempt) -> log.warn(
                 "Retrying {}-{}@{} key={} (attempt {}): {}",
                 record.topic(),

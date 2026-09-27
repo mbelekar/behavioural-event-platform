@@ -8,16 +8,25 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.json.KafkaJsonSchemaDeserializer;
 import io.confluent.kafka.serializers.json.KafkaJsonSchemaDeserializerConfig;
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest
+@ExtendWith(OutputCaptureExtension.class)
 class RawEventListenerIntegrationTest {
 
     static final Duration TIMEOUT = Duration.ofSeconds(30);
@@ -95,5 +104,77 @@ class RawEventListenerIntegrationTest {
                 SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.INVALID_TOPIC, eventId, TIMEOUT);
         JsonNode document = Json.MAPPER.readTree(record.value());
         assertThat(document.get("validationErrors").get(0).get("code").asText()).isEqualTo("UNKNOWN_SCHEMA_VERSION");
+    }
+
+    @Test
+    void nonJsonRecordIsDeadLetteredByteForByte(CapturedOutput output) throws Exception {
+        String eventId = ValidatorTestEvents.uniqueEventId();
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        bytes.writeBytes(("not json " + eventId).getBytes(StandardCharsets.UTF_8));
+        bytes.write(0xFF);
+        byte[] raw = bytes.toByteArray();
+
+        KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "dlq-user", raw);
+
+        ConsumerRecord<String, byte[]> dead = KafkaTopics.awaitRecord(
+                SharedSchemaRegistry.bootstrapServers(), ValidatorConfiguration.DLQ_TOPIC, eventId, TIMEOUT);
+        assertThat(dead.value()).isEqualTo(raw);
+        assertThat(dead.key()).isEqualTo("dlq-user");
+        int partition = ByteBuffer.wrap(header(dead, KafkaHeaders.DLT_ORIGINAL_PARTITION))
+                .getInt();
+        long offset =
+                ByteBuffer.wrap(header(dead, KafkaHeaders.DLT_ORIGINAL_OFFSET)).getLong();
+        assertThat(dead.partition()).isEqualTo(partition);
+        assertThat(new String(header(dead, KafkaHeaders.DLT_ORIGINAL_TOPIC), StandardCharsets.UTF_8))
+                .isEqualTo("behavioural.raw");
+        assertThat(new String(header(dead, KafkaHeaders.DLT_EXCEPTION_CAUSE_FQCN), StandardCharsets.UTF_8))
+                .contains("JsonParseException");
+        assertNoOutcome(eventId);
+        assertThat(output.getOut())
+                .containsPattern("WARN .*Retrying behavioural\\.raw-" + partition + "@" + offset
+                        + " key=dlq-user \\(attempt 3\\)")
+                .containsPattern("ERROR .*Dead-lettered behavioural\\.raw-" + partition + "@" + offset
+                        + " key=dlq-user to validation\\.dlq: .*JsonParseException");
+    }
+
+    @Test
+    void oversizedOutcomeIsDeadLetteredAndPartitionMovesOn() throws Exception {
+        String eventId = ValidatorTestEvents.uniqueEventId();
+        String unknownFields = IntStream.range(0, 15_000)
+                .mapToObj(i -> ",\"f%05d\":1".formatted(i))
+                .collect(Collectors.joining());
+        String raw = ValidatorTestEvents.json(
+                eventId, "product_viewed", 2, "{\"productId\":\"SKU-981\"" + unknownFields + "}");
+
+        KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "big-user", raw);
+
+        ConsumerRecord<String, byte[]> dead = KafkaTopics.awaitRecord(
+                SharedSchemaRegistry.bootstrapServers(), ValidatorConfiguration.DLQ_TOPIC, eventId, TIMEOUT);
+        assertThat(dead.key()).isEqualTo("big-user");
+        assertThat(dead.value()).isEqualTo(raw.getBytes(StandardCharsets.UTF_8));
+        assertNoOutcome(eventId);
+
+        String nextId = ValidatorTestEvents.uniqueEventId();
+        KafkaTopics.send(
+                SharedSchemaRegistry.bootstrapServers(),
+                "behavioural.raw",
+                "big-user",
+                ValidatorTestEvents.json(nextId, "product_viewed", 2, "{\"productId\":\"SKU-981\"}"));
+        KafkaTopics.awaitRecord(
+                SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, nextId, TIMEOUT);
+    }
+
+    private static byte[] header(ConsumerRecord<String, byte[]> record, String name) {
+        assertThat(record.headers().lastHeader(name)).as(name).isNotNull();
+        return record.headers().lastHeader(name).value();
+    }
+
+    private static void assertNoOutcome(String eventId) {
+        for (String topic : new String[] {ValidatedEventPublisher.VALID_TOPIC, ValidatedEventPublisher.INVALID_TOPIC}) {
+            assertThat(KafkaTopics.recordsContaining(
+                            SharedSchemaRegistry.bootstrapServers(), topic, eventId, Duration.ofSeconds(2)))
+                    .as(topic)
+                    .isEmpty();
+        }
     }
 }

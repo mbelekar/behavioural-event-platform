@@ -12,7 +12,8 @@ import org.testcontainers.kafka.KafkaContainer;
  */
 public final class SharedSchemaRegistry {
 
-    public static final List<String> TOPICS = List.of("behavioural.raw", "behavioural.valid", "behavioural.invalid");
+    public static final List<String> TOPICS =
+            List.of("behavioural.raw", "behavioural.valid", "behavioural.invalid", "validation.dlq");
 
     private static final Network NETWORK = Network.newNetwork();
     private static final KafkaContainer KAFKA = SchemaRegistryContainers.kafka(NETWORK);

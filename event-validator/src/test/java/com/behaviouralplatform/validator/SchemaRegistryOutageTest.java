@@ -66,6 +66,13 @@ class SchemaRegistryOutageTest {
                             Duration.ofSeconds(15)))
                     .as("an unavailable registry must never produce an invalid event")
                     .isEmpty();
+            assertThat(KafkaTopics.recordsContaining(
+                            KAFKA.getBootstrapServers(),
+                            ValidatorConfiguration.DLQ_TOPIC,
+                            eventId,
+                            Duration.ofSeconds(5)))
+                    .as("an infrastructure failure is never dead-lettered")
+                    .isEmpty();
         } finally {
             docker.unpauseContainerCmd(SCHEMA_REGISTRY.getContainerId()).exec();
         }
