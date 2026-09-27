@@ -1,4 +1,4 @@
-# 0001 — Use Gradle and Java 21
+# 0001: Use Gradle and Java 21
 
 ## Context
 

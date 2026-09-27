@@ -1,4 +1,4 @@
-# 0002 — Use client-supplied event IDs
+# 0002: Use client-supplied event IDs
 
 ## Context
 

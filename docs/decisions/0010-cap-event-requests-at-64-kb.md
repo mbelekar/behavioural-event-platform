@@ -1,4 +1,4 @@
-# 0010 — Cap event requests at 64 KB
+# 0010: Cap event requests at 64 KB
 
 ## Context
 

@@ -1,4 +1,4 @@
-# 0012 — Check business rules after schema validation
+# 0012: Check business rules after schema validation
 
 ## Context
 

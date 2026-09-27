@@ -1,4 +1,4 @@
-# 0004 — Use Kafka as the ingestion boundary
+# 0004: Use Kafka as the ingestion boundary
 
 ## Context
 

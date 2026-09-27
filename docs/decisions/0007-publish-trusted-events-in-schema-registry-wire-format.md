@@ -1,4 +1,4 @@
-# 0007 — Publish trusted events in Schema Registry wire format
+# 0007: Publish trusted events in Schema Registry wire format
 
 ## Context
 

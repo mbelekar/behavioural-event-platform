@@ -1,4 +1,4 @@
-# 0009 — Test the pipeline with service jars
+# 0009: Test the pipeline with service jars
 
 ## Context
 

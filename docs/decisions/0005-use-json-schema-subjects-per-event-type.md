@@ -1,4 +1,4 @@
-# 0005 — Use JSON Schema subjects per event type
+# 0005: Use JSON Schema subjects per event type
 
 ## Context
 

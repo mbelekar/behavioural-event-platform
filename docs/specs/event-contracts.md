@@ -15,7 +15,7 @@ Define what a well-formed event is for each event type and version, so producers
   | `search_performed` | 1 | `query` (non-empty string) | `resultCount` (integer ≥ 0) |
   | `button_clicked` | 1 | `buttonId` (non-empty string) | `pageUrl` (string) |
   | `checkout_started` | 1 | `cartId` (non-empty string) | `itemCount` (integer ≥ 1) |
-  | `purchase_completed` | 1 | `orderId` (non-empty string), `amount` (number), `currency` (three upper-case letters) | — |
+  | `purchase_completed` | 1 | `orderId` (non-empty string), `amount` (number), `currency` (three upper-case letters) | None |
 
 - **R2.** Every event shares an envelope:
   - required non-empty strings: `eventId`, `eventType`, `source`, `correlationId`;

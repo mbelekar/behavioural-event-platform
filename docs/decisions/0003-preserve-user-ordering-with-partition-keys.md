@@ -1,4 +1,4 @@
-# 0003 — Key events by user or session
+# 0003: Key events by user or session
 
 ## Context
 

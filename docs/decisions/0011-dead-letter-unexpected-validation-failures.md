@@ -1,4 +1,4 @@
-# 0011 — Dead-letter unexpected validation failures
+# 0011: Dead-letter unexpected validation failures
 
 ## Context
 

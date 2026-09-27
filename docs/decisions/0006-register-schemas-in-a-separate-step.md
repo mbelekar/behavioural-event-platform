@@ -1,4 +1,4 @@
-# 0006 — Register schemas separately from services
+# 0006: Register schemas separately from services
 
 ## Context
 

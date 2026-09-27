@@ -1,4 +1,4 @@
-# 0008 — Separate invalid events from infrastructure failures
+# 0008: Separate invalid events from infrastructure failures
 
 ## Context
 

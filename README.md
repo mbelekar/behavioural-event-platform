@@ -185,8 +185,8 @@ auto/                  build, test, run and local-infrastructure scripts
 
 ## Documentation
 
-- [`Design.md`](docs/Design.md) — architecture and system behaviour
-- [`docs/decisions`](docs/decisions/) — significant architecture decisions
+- [`Design.md`](docs/Design.md): architecture and system behaviour
+- [`docs/decisions`](docs/decisions/): significant architecture decisions
 
 ## License
 

@@ -20,7 +20,7 @@ public final class SchemaFiles {
     public static final String ENVELOPE_SUBJECT = "behavioural_envelope";
 
     private static final Pattern VERSION_FILE = Pattern.compile("v(\\d+)\\.json");
-    /** {@code "$ref": "<subject>/v<N>.json"} — the name carries the referenced subject and version. */
+    /** {@code "$ref": "<subject>/v<N>.json"}: the name carries the referenced subject and version. */
     private static final Pattern REF = Pattern.compile("\"\\$ref\"\\s*:\\s*\"(([a-z_]+)/v(\\d+)\\.json)\"");
 
     private static final Comparator<Path> ENVELOPE_FIRST = Comparator.comparing(
