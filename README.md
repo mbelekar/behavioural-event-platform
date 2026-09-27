@@ -1,5 +1,7 @@
 # Behavioural Event Platform
 
+[![tests](https://github.com/mbelekar/behavioural-event-platform/actions/workflows/tests.yml/badge.svg)](https://github.com/mbelekar/behavioural-event-platform/actions/workflows/tests.yml)
+
 A Java/Spring Boot platform that accepts behavioural events, validates them against contracts in Schema Registry, and publishes a trusted stream to Kafka.
 
 The main idea is simple: producers can send events without being coupled to downstream validation, while consumers get a stream they can trust.
@@ -68,29 +70,29 @@ Requirements:
 - Docker
 - JDK 17+
 
-Build and run the tests:
+Build the services:
 
 ```bash
-./gradlew build
+./auto/build
 ```
 
-Start Kafka and Schema Registry:
+Start Kafka, Schema Registry and the topics, and register the event schemas:
 
 ```bash
-docker compose up -d --wait
+./auto/live-up
 ```
 
-Register the event schemas:
+Run the collector and validator, each in its own terminal:
 
 ```bash
-./gradlew :schema-registration:registerSchemas
+./auto/run collector
+./auto/run validator
 ```
 
-Run the collector and validator:
+Stop everything and remove its data:
 
 ```bash
-./gradlew :event-collector:bootRun
-./gradlew :event-validator:bootRun
+./auto/live-down
 ```
 
 ## Try it
@@ -132,10 +134,10 @@ An event that does not conform to its registered schema is instead published to 
 The project uses Testcontainers to test against real Kafka and Schema Registry instances rather than mocking the infrastructure.
 
 ```bash
-./gradlew build
+./auto/test
 ```
 
-The tests cover ingestion, schema registration and evolution, valid and invalid events, and dependency failure behaviour.
+CI runs the same command on every push to `main` and every pull request. The tests cover ingestion, schema registration and evolution, valid and invalid events, and dependency failure behaviour.
 
 ## Project structure
 
@@ -147,9 +149,15 @@ schema-registration/   Schema Registry registration
 integration-tests/     pipeline tests running the service jars
 docs/                  design, specs and architecture decisions
 docker-compose.yml     local Kafka, Schema Registry and topics
+auto/                  build, test, run and local-infrastructure scripts
+.github/workflows/     CI
 ```
 
 ## Documentation
 
 - [`Design.md`](docs/Design.md) — architecture and system behaviour
 - [`docs/decisions`](docs/decisions/) — significant architecture decisions
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
