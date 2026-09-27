@@ -17,7 +17,7 @@ HTTP ingestion and asynchronous schema validation are implemented.
 | Event Validator | ✅ Implemented |
 | Valid / invalid event streams | ✅ Implemented |
 | Dead-letter topic (`validation.dlq`) | ✅ Implemented |
-| Business validation | 📋 Planned |
+| Business validation | ✅ Implemented |
 | Cross-cluster Event Router | 📋 Planned |
 | Observability (metrics, tracing, dashboards) | ⏸️ Deferred until productionisation |
 
@@ -39,7 +39,7 @@ behavioural.raw
 behavioural.valid
 ```
 
-Anything on `behavioural.valid` conforms to a registered schema.
+Anything on `behavioural.valid` conforms to a registered schema and passes the platform's business rules.
 
 Invalid producer data goes to `behavioural.invalid`. Infrastructure failures are retried rather than being mistaken for bad data. Events that can't be processed go to `validation.dlq`.
 
@@ -108,7 +108,7 @@ curl -X POST localhost:8080/v1/events \
     "eventId": "demo-1",
     "eventType": "product_viewed",
     "schemaVersion": 2,
-    "occurredAt": "2026-09-27T01:23:31Z",
+    "occurredAt": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",
     "source": "web",
     "userId": "user-123",
     "payload": {
@@ -129,7 +129,7 @@ HTTP
   → behavioural.valid
 ```
 
-An event that does not conform to its registered schema is instead published to `behavioural.invalid` with structured validation errors.
+An event that does not conform to its registered schema, or fails a business rule, is instead published to `behavioural.invalid` with structured validation errors.
 
 ### Inspect and replay the DLQ
 
