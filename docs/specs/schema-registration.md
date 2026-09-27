@@ -2,52 +2,38 @@
 
 ## Purpose
 
-Publish the event contracts (see [event contracts](event-contracts.md)) to Schema Registry in a controlled, repeatable step. This keeps each registry version aligned with its `schemaVersion`, and stops breaking changes before any producer or service depends on them. Services never register schemas themselves.
+Publish the event contracts to Schema Registry in a repeatable step that keeps each registry version aligned with its `schemaVersion` and rejects breaking changes before producers or services depend on them.
 
 ## Requirements
 
-- **R1.** Registration is run as a single command:
-  - `./gradlew :schema-registration:registerSchemas` targets `http://localhost:8081`.
-  - `-PschemaRegistryUrl=<url>` targets another registry.
-- **R2.** The envelope contract is registered first, then each event type alphabetically, each type's versions in ascending order.
-- **R3.** Every subject's compatibility level is set to `BACKWARD` before its schemas are registered.
-- **R4.** Each file's version must line up with the registry **before** anything is registered for it:
-  - a schema the registry already holds must be registered at exactly its file's version;
-  - a new schema is registered only if the subject's latest version is exactly one lower than the file's (or the subject doesn't exist yet and the file is `v1.json`).
+- **R1.** `./gradlew :schema-registration:registerSchemas` registers against `http://localhost:8081`; `-PschemaRegistryUrl=<url>` targets another registry.
+- **R2.** The envelope is registered first, then event types alphabetically, each type's versions in ascending order.
+- **R3.** Each subject's compatibility is set to `BACKWARD` before registration.
+- **R4.** Before registering a file, its version must line up with the registry:
+  - a schema already held must be at the file's version;
+  - a new schema is registered only if the subject's latest version is one lower (or the subject doesn't exist and the file is `v1.json`).
 
-  Otherwise registration fails, and the registry is left unchanged for that file.
-- **R5.** Registration is idempotent. Re-running it with unchanged schemas creates no new versions and reports the same schema IDs.
-- **R6.** An incompatible schema change is rejected by Schema Registry, and registration fails.
-- **R7.** On success, one line is printed per schema: `<subject> v<N> -> id <schemaId>`.
-- **R8.** Registration stops at the first failure. Schemas registered before that failure stay registered.
+  Otherwise registration fails and leaves the registry unchanged for that file.
+- **R5.** Re-running with unchanged schemas creates no new versions and reports the same IDs.
+- **R6.** An incompatible change is rejected by Schema Registry and fails registration.
+- **R7.** Each registered schema is printed as `<subject> v<N> -> id <schemaId>`.
+- **R8.** Registration stops at the first failure; earlier schemas stay registered.
 
 ## Acceptance criteria
 
-- **AC1.** Given an empty Schema Registry, when registration runs, then 8 schemas are registered, in order:
+- **AC1.** On an empty registry, 8 schemas are registered in this order: `behavioural_envelope` v1, `button_clicked` v1, `checkout_started` v1, `page_viewed` v1, `product_viewed` v1 and v2, `purchase_completed` v1, `search_performed` v1.
+- **AC2.** A second run prints the same subjects, versions and IDs, and `product_viewed` still has versions `[1, 2]`.
+- **AC3.** Every subject's compatibility is `BACKWARD`.
+- **AC4.** An incompatible schema file (e.g. a string field changed to integer) fails with HTTP `409`.
+- **AC5.** If the registry holds a different version 1 of a subject, registering that subject's `v1.json` fails with a message naming the file and the registry's latest version, and the subject still has only version 1.
+- **AC6.** With Schema Registry unreachable, registration fails with a connection error and registers nothing.
 
-  | Subject | Version |
-  |---|---|
-  | `behavioural_envelope` | 1 |
-  | `button_clicked` | 1 |
-  | `checkout_started` | 1 |
-  | `page_viewed` | 1 |
-  | `product_viewed` | 1 |
-  | `product_viewed` | 2 |
-  | `purchase_completed` | 1 |
-  | `search_performed` | 1 |
-
-- **AC2.** Given registration has already run, when it runs again, then it prints the same subjects, versions and IDs, and `product_viewed` still has exactly versions `[1, 2]`.
-- **AC3.** Given registration has run, then every subject's compatibility level is `BACKWARD`.
-- **AC4.** Given a schema file that is incompatible with the latest registered version (for example, a field changed from string to integer), when registration runs, then it fails with an HTTP `409` from Schema Registry.
-- **AC5.** Given the registry already holds a different version 1 of a subject, when registration runs with that subject's `v1.json`, then it fails with a message naming the file and the registry's latest version, and the subject still has only version 1.
-- **AC6.** Given Schema Registry is unreachable, when registration runs, then it fails with a connection error and registers nothing.
-
-## Failure and edge-case behaviour
+## Failure and edge cases
 
 | Situation | Behaviour |
-|---|---|
-| A version file is skipped (e.g. `v1.json`, then `v3.json`) | Registration fails at `v3.json` and registers nothing for it (R4) |
-| An already-registered file is edited | Its content is now a new schema that doesn't match its version, so registration fails and registers nothing for it |
-| Someone registered a schema by hand | Detected as a version mismatch at the next run; the registry isn't changed further |
-| Registration hasn't run for a newly added version | Events using that version are marked `UNKNOWN_SCHEMA_VERSION` by the validator until it does |
-| Failure part-way through | Earlier schemas stay registered. Fix the cause and re-run; already-registered schemas are unaffected (R5). |
+| --- | --- |
+| A version file is skipped (`v1.json`, then `v3.json`) | Fails at `v3.json`; nothing is registered for it. |
+| An already-registered file is edited | Fails for that file; nothing is registered for it. |
+| A schema was registered by hand | Detected as a mismatch at the next run; the registry isn't changed further. |
+| A new version isn't registered yet | The validator marks events using it `UNKNOWN_SCHEMA_VERSION`. |
+| Failure part-way through | Earlier schemas stay registered. Fix the cause and re-run. |
