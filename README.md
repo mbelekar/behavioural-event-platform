@@ -41,7 +41,7 @@ behavioural.valid
 
 Anything on `behavioural.valid` conforms to a registered schema.
 
-Invalid producer data goes to `behavioural.invalid`. Infrastructure failures are retried rather than being mistaken for bad data. Events that can't be processed at all are set aside in `validation.dlq`, not lost.
+Invalid producer data goes to `behavioural.invalid`. Infrastructure failures are retried rather than being mistaken for bad data. Events that can't be processed go to `validation.dlq`.
 
 ## Architecture
 
@@ -133,7 +133,9 @@ An event that does not conform to its registered schema is instead published to 
 
 ### Inspect and replay the DLQ
 
-A raw record the validator can't process (for example, one that isn't JSON) is retried twice, then copied unchanged to `validation.dlq`. Headers record the exception and the source topic, partition and offset (the last two are binary). To inspect it:
+Events the validator can't process are copied unchanged to `validation.dlq`.
+
+Inspect them:
 
 ```bash
 docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
@@ -141,7 +143,7 @@ docker exec kafka-a /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server 
   --formatter-property print.key=true --formatter-property print.headers=true
 ```
 
-Once the cause is fixed, copy the records back to `behavioural.raw` to validate them again. The copy is saved to a file first, so a record that fails again is not replayed in a loop:
+Once the cause is fixed, replay them to `behavioural.raw`:
 
 ```bash
 docker exec kafka-a sh -c '/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
@@ -151,7 +153,7 @@ docker exec kafka-a sh -c '/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-
     --topic behavioural.raw --reader-property parse.key=true --reader-property key.separator="|" < /tmp/dlq.txt'
 ```
 
-This replays every record in `validation.dlq`, one per line, so it suits JSON events only. Replayed events keep their `eventId`, so consumers deduplicate them as usual.
+This replays every DLQ record and suits JSON events only. The file stops records that fail again from looping.
 
 ## Testing
 
