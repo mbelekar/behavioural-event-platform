@@ -28,6 +28,16 @@ final class TestEvents {
         return (ObjectNode) MAPPER.readTree(VALID_JSON);
     }
 
+    /** A valid event whose JSON body is exactly {@code bytes} long, padded in {@code payload.category}. */
+    static String validOfSize(String eventId, int bytes) {
+        ObjectNode node = validNode();
+        node.put("eventId", eventId);
+        ObjectNode payload = (ObjectNode) node.get("payload");
+        payload.put("category", "");
+        payload.put("category", "x".repeat(bytes - node.toString().length()));
+        return node.toString();
+    }
+
     static BehaviouralEvent valid() {
         return toEvent(validNode());
     }

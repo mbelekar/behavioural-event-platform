@@ -45,6 +45,12 @@ class EventController {
         return problem;
     }
 
+    @ExceptionHandler(RequestTooLargeException.class)
+    ProblemDetail requestTooLarge() {
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONTENT_TOO_LARGE, "Request body exceeds the maximum event size of 64 KB");
+    }
+
     @ExceptionHandler(EventTooLargeException.class)
     ProblemDetail eventTooLarge(EventTooLargeException e) {
         log.warn(

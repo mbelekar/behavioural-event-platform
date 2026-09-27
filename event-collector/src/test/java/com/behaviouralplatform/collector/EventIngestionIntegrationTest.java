@@ -2,10 +2,12 @@ package com.behaviouralplatform.collector;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +77,26 @@ class EventIngestionIntegrationTest {
                 .hasValueSatisfying(contentType -> assertThat(contentType).startsWith("application/problem+json"));
         assertThat(TestEvents.MAPPER.readTree(response.body()).get("detail").asString())
                 .isEqualTo("Event exceeds the maximum size accepted by the platform");
+        assertThat(countRecordsContaining(RawEventPublisher.TOPIC, eventId, Duration.ofSeconds(5)))
+                .isZero();
+    }
+
+    @Test
+    void oversizedChunkedBodyIsRejectedWith413() throws Exception {
+        String eventId = "chunked-" + UUID.randomUUID();
+        byte[] body = TestEvents.validOfSize(eventId, 70_000).getBytes(StandardCharsets.UTF_8);
+        HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v1/events"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofInputStream(() -> new ByteArrayInputStream(body)))
+                .build();
+
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(413);
+        assertThat(response.headers().firstValue("Content-Type"))
+                .hasValueSatisfying(contentType -> assertThat(contentType).startsWith("application/problem+json"));
+        assertThat(TestEvents.MAPPER.readTree(response.body()).get("detail").asString())
+                .isEqualTo("Request body exceeds the maximum event size of 64 KB");
         assertThat(countRecordsContaining(RawEventPublisher.TOPIC, eventId, Duration.ofSeconds(5)))
                 .isZero();
     }

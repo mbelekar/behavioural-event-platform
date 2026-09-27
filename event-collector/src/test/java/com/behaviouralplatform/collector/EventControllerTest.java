@@ -112,6 +112,38 @@ class EventControllerTest {
                 .andExpect(problem(413));
     }
 
+    @Test
+    void acceptsEventOfExactlyTheMaximumSize() throws Exception {
+        mvc.perform(post("/v1/events")
+                        .contentType(APPLICATION_JSON)
+                        .content(TestEvents.validOfSize("max-size", 65_536)))
+                .andExpect(status().isAccepted());
+
+        verify(publisher).publish(any());
+    }
+
+    @Test
+    void rejectsBodyOverTheMaximumSizeWithoutPublishing() throws Exception {
+        mvc.perform(post("/v1/events")
+                        .contentType(APPLICATION_JSON)
+                        .content(TestEvents.validOfSize("over-max-size", 65_537)))
+                .andExpect(problem(413))
+                .andExpect(jsonPath("$.detail").value("Request body exceeds the maximum event size of 64 KB"));
+
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void rejectsDeclaredOversizedBodyWithoutReadingIt() throws Exception {
+        mvc.perform(post("/v1/events")
+                        .contentType(APPLICATION_JSON)
+                        .header("Content-Length", 70_000)
+                        .content(TestEvents.VALID_JSON))
+                .andExpect(problem(413));
+
+        verifyNoInteractions(publisher);
+    }
+
     /** Every error response uses the same RFC 9457 ProblemDetail shape. */
     private static ResultMatcher problem(int status) {
         return result -> {

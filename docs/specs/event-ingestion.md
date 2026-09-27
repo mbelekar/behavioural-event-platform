@@ -21,6 +21,7 @@ Accept behavioural events over HTTP and store them durably in `behavioural.raw` 
 - **R6.** `202 Accepted` with `{"eventId": …, "status": "accepted"}` is returned only after Kafka acknowledges the write.
 - **R7.** Errors use ProblemDetail (`application/problem+json`).
 - **R8.** An event that Kafka rejects as too large returns `413 Payload Too Large`, which tells the client not to retry it. Other publish failures return `503`.
+- **R9.** A request body larger than 64 KB (65,536 bytes) returns `413` before it is parsed, whether or not the request declares its length.
 
 ## Acceptance criteria
 
@@ -31,7 +32,9 @@ Accept behavioural events over HTTP and store them durably in `behavioural.raw` 
 - **AC5.** An event missing `eventType`, `userId` and `sessionId` returns `400` with `fields` `eventType` and `userId|sessionId`, and nothing is written.
 - **AC6.** Malformed JSON, an unknown top-level field or an unparseable `occurredAt` returns `400` "Failed to read request", and nothing is written.
 - **AC7.** With Kafka unavailable, a request returns `503` within about 10 seconds.
-- **AC8.** An event larger than Kafka's 1 MB request limit returns `413`, and nothing is written.
+- **AC8.** An event within 64 KB that Kafka rejects as too large (its record size limit set lower) returns `413`, and nothing is written.
+- **AC9.** A 65,536-byte event body returns `202`; a 65,537-byte body returns `413` "Request body exceeds the maximum event size of 64 KB", and nothing is written.
+- **AC10.** A body over 64 KB sent without a `Content-Length` (chunked) returns `413`, and nothing is written.
 
 ## Failure and edge cases
 
@@ -42,4 +45,5 @@ Accept behavioural events over HTTP and store them durably in `behavioural.raw` 
 | Client retries after a `503` or timeout | The client reuses its `eventId`. The collector does not deduplicate. |
 | Wrong payload fields, or unknown or malformed `eventType` / `schemaVersion` | `202`. The validator marks the event invalid. |
 | Schema Registry unavailable | No effect on ingestion. |
-| Event larger than Kafka's 1 MB request limit | `413`. The client must not retry it; the collector still reads the whole body before Kafka rejects it. |
+| Body larger than 64 KB | `413`. The client must not retry it. The collector stops reading at the limit, and doesn't read a body whose declared length is over it. |
+| Event within 64 KB but larger than Kafka accepts (topic or broker limit set lower) | `413`. The client must not retry it. |
