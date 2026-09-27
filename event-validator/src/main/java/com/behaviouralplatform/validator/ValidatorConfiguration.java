@@ -1,5 +1,6 @@
 package com.behaviouralplatform.validator;
 
+import com.behaviouralplatform.contracts.Topics;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig;
@@ -19,8 +20,6 @@ import org.springframework.util.backoff.FixedBackOff;
 
 @Configuration(proxyBeanMethods = false)
 class ValidatorConfiguration {
-
-    static final String DLQ_TOPIC = "validation.dlq";
 
     private static final Logger log = LoggerFactory.getLogger(ValidatorConfiguration.class);
 
@@ -49,7 +48,7 @@ class ValidatorConfiguration {
     @Bean
     DefaultErrorHandler kafkaErrorHandler(KafkaTemplate<String, byte[]> kafkaTemplate) {
         DeadLetterPublishingRecoverer deadLetter = new DeadLetterPublishingRecoverer(
-                kafkaTemplate, (record, ex) -> new TopicPartition(DLQ_TOPIC, record.partition()));
+                kafkaTemplate, (record, ex) -> new TopicPartition(Topics.DLQ, record.partition()));
         DefaultErrorHandler handler = new DefaultErrorHandler(
                 (record, ex) -> {
                     deadLetter.accept(record, ex);
@@ -59,7 +58,7 @@ class ValidatorConfiguration {
                             record.partition(),
                             record.offset(),
                             record.key(),
-                            DLQ_TOPIC,
+                            Topics.DLQ,
                             String.valueOf(ex.getCause() == null ? ex : ex.getCause()));
                 },
                 new FixedBackOff(1_000L, 2));

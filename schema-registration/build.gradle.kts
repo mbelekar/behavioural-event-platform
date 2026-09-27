@@ -21,6 +21,7 @@ dependencies {
     api(libs.json.schema.provider)
 
     testFixturesApi(platform(libs.spring.boot.dependencies))
+    testFixturesImplementation(project(":event-contracts"))
     testFixturesApi(libs.testcontainers.kafka)
     testFixturesApi(libs.kafka.clients)
 

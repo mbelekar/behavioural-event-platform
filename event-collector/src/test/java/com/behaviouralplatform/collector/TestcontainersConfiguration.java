@@ -1,5 +1,6 @@
 package com.behaviouralplatform.collector;
 
+import com.behaviouralplatform.contracts.Topics;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -20,6 +21,6 @@ class TestcontainersConfiguration {
     /** In deployed environments topics are created by infrastructure, not by the collector. */
     @Bean
     NewTopic rawTopic() {
-        return TopicBuilder.name(RawEventPublisher.TOPIC).partitions(6).build();
+        return TopicBuilder.name(Topics.RAW).partitions(6).build();
     }
 }

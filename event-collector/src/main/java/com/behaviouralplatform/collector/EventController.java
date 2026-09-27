@@ -1,6 +1,7 @@
 package com.behaviouralplatform.collector;
 
 import com.behaviouralplatform.contracts.BehaviouralEvent;
+import com.behaviouralplatform.contracts.Topics;
 import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
@@ -63,7 +64,7 @@ class EventController {
 
     @ExceptionHandler(PublishFailedException.class)
     ProblemDetail publishFailed(PublishFailedException e) {
-        log.warn("Could not publish event {} to {}", e.eventId(), RawEventPublisher.TOPIC, e);
+        log.warn("Could not publish event {} to {}", e.eventId(), Topics.RAW, e);
         return ProblemDetail.forStatusAndDetail(
                 HttpStatus.SERVICE_UNAVAILABLE, "Event could not be accepted, retry later");
     }

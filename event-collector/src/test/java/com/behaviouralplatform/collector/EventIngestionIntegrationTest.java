@@ -2,6 +2,7 @@ package com.behaviouralplatform.collector;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.behaviouralplatform.contracts.Topics;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -50,7 +51,7 @@ class EventIngestionIntegrationTest {
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 
         assertThat(response.statusCode()).isEqualTo(202);
-        ConsumerRecord<String, String> record = readSingleRecord(RawEventPublisher.TOPIC);
+        ConsumerRecord<String, String> record = readSingleRecord(Topics.RAW);
         assertThat(record.key()).isEqualTo("user-123");
         JsonNode published = TestEvents.MAPPER.readTree(record.value());
         assertThat(published.get("eventId").asString()).isEqualTo("01K5R4F8W8J5Z8XJH0N6F4P2C1");
@@ -77,7 +78,7 @@ class EventIngestionIntegrationTest {
                 .hasValueSatisfying(contentType -> assertThat(contentType).startsWith("application/problem+json"));
         assertThat(TestEvents.MAPPER.readTree(response.body()).get("detail").asString())
                 .isEqualTo("Event exceeds the maximum size accepted by the platform");
-        assertThat(countRecordsContaining(RawEventPublisher.TOPIC, eventId, Duration.ofSeconds(5)))
+        assertThat(countRecordsContaining(Topics.RAW, eventId, Duration.ofSeconds(5)))
                 .isZero();
     }
 
@@ -97,7 +98,7 @@ class EventIngestionIntegrationTest {
                 .hasValueSatisfying(contentType -> assertThat(contentType).startsWith("application/problem+json"));
         assertThat(TestEvents.MAPPER.readTree(response.body()).get("detail").asString())
                 .isEqualTo("Request body exceeds the maximum event size of 64 KB");
-        assertThat(countRecordsContaining(RawEventPublisher.TOPIC, eventId, Duration.ofSeconds(5)))
+        assertThat(countRecordsContaining(Topics.RAW, eventId, Duration.ofSeconds(5)))
                 .isZero();
     }
 

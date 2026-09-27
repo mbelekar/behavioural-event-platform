@@ -1,5 +1,6 @@
 package com.behaviouralplatform.validator;
 
+import com.behaviouralplatform.contracts.Topics;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Instant;
@@ -12,9 +13,6 @@ import org.springframework.stereotype.Component;
 @Component
 class ValidatedEventPublisher {
 
-    static final String VALID_TOPIC = "behavioural.valid";
-    static final String INVALID_TOPIC = "behavioural.invalid";
-
     private final KafkaTemplate<String, byte[]> kafkaTemplate;
 
     ValidatedEventPublisher(KafkaTemplate<String, byte[]> kafkaTemplate) {
@@ -23,13 +21,13 @@ class ValidatedEventPublisher {
 
     /** Republishes the producer's exact JSON, framed with the id of the schema it conformed to. */
     void publishValid(String key, byte[] rawJson, int schemaId) {
-        send(VALID_TOPIC, key, SchemaRegistryWireFormat.frame(schemaId, rawJson));
+        send(Topics.VALID, key, SchemaRegistryWireFormat.frame(schemaId, rawJson));
     }
 
     void publishInvalid(String key, JsonNode event, List<ValidationError> errors) {
         try {
             send(
-                    INVALID_TOPIC,
+                    Topics.INVALID,
                     key,
                     Json.MAPPER.writeValueAsBytes(InvalidEventDocument.of(event, errors, Instant.now())));
         } catch (JsonProcessingException e) {

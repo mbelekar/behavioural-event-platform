@@ -2,6 +2,7 @@ package com.behaviouralplatform.validator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.behaviouralplatform.contracts.Topics;
 import com.behaviouralplatform.schemas.KafkaTopics;
 import com.behaviouralplatform.schemas.SharedSchemaRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,9 +46,9 @@ class RawEventListenerIntegrationTest {
 
         KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "user-123", raw);
 
-        ConsumerRecord<String, byte[]> record = KafkaTopics.awaitRecord(
-                SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, TIMEOUT);
-        assertNotOn(eventId, ValidatedEventPublisher.INVALID_TOPIC, ValidatorConfiguration.DLQ_TOPIC);
+        ConsumerRecord<String, byte[]> record =
+                KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), Topics.VALID, eventId, TIMEOUT);
+        assertNotOn(eventId, Topics.INVALID, Topics.DLQ);
         assertThat(record.key()).isEqualTo("user-123");
         assertThat(ByteBuffer.wrap(record.value(), 1, 4).getInt())
                 .isEqualTo(SharedSchemaRegistry.client()
@@ -60,7 +61,7 @@ class RawEventListenerIntegrationTest {
                                     SharedSchemaRegistry.schemaRegistryUrl(),
                             KafkaJsonSchemaDeserializerConfig.JSON_VALUE_TYPE, JsonNode.class.getName()),
                     false);
-            JsonNode read = deserializer.deserialize(ValidatedEventPublisher.VALID_TOPIC, record.value());
+            JsonNode read = deserializer.deserialize(Topics.VALID, record.value());
             assertThat(read).isEqualTo(Json.MAPPER.readTree(raw));
         }
     }
@@ -72,9 +73,9 @@ class RawEventListenerIntegrationTest {
 
         KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "user-123", raw);
 
-        ConsumerRecord<String, byte[]> record = KafkaTopics.awaitRecord(
-                SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.INVALID_TOPIC, eventId, TIMEOUT);
-        assertNotOn(eventId, ValidatedEventPublisher.VALID_TOPIC, ValidatorConfiguration.DLQ_TOPIC);
+        ConsumerRecord<String, byte[]> record =
+                KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), Topics.INVALID, eventId, TIMEOUT);
+        assertNotOn(eventId, Topics.VALID, Topics.DLQ);
         assertThat(record.key()).isEqualTo("user-123");
         JsonNode document = Json.MAPPER.readTree(record.value());
         assertThat(document.get("event")).isEqualTo(Json.MAPPER.readTree(raw));
@@ -91,8 +92,7 @@ class RawEventListenerIntegrationTest {
 
         KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "user-123", raw);
 
-        KafkaTopics.awaitRecord(
-                SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, TIMEOUT);
+        KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), Topics.VALID, eventId, TIMEOUT);
     }
 
     @Test
@@ -102,8 +102,8 @@ class RawEventListenerIntegrationTest {
 
         KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "user-123", raw);
 
-        ConsumerRecord<String, byte[]> record = KafkaTopics.awaitRecord(
-                SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.INVALID_TOPIC, eventId, TIMEOUT);
+        ConsumerRecord<String, byte[]> record =
+                KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), Topics.INVALID, eventId, TIMEOUT);
         JsonNode document = Json.MAPPER.readTree(record.value());
         assertThat(document.get("validationErrors").get(0).get("code").asText()).isEqualTo("UNKNOWN_SCHEMA_VERSION");
     }
@@ -118,8 +118,8 @@ class RawEventListenerIntegrationTest {
 
         KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "dlq-user", raw);
 
-        ConsumerRecord<String, byte[]> dead = KafkaTopics.awaitRecord(
-                SharedSchemaRegistry.bootstrapServers(), ValidatorConfiguration.DLQ_TOPIC, eventId, TIMEOUT);
+        ConsumerRecord<String, byte[]> dead =
+                KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), Topics.DLQ, eventId, TIMEOUT);
         assertThat(dead.value()).isEqualTo(raw);
         assertThat(dead.key()).isEqualTo("dlq-user");
         int partition = ByteBuffer.wrap(header(dead, KafkaHeaders.DLT_ORIGINAL_PARTITION))
@@ -131,7 +131,7 @@ class RawEventListenerIntegrationTest {
                 .isEqualTo("behavioural.raw");
         assertThat(new String(header(dead, KafkaHeaders.DLT_EXCEPTION_CAUSE_FQCN), StandardCharsets.UTF_8))
                 .contains("JsonParseException");
-        assertNotOn(eventId, ValidatedEventPublisher.VALID_TOPIC, ValidatedEventPublisher.INVALID_TOPIC);
+        assertNotOn(eventId, Topics.VALID, Topics.INVALID);
         assertThat(output.getOut())
                 .containsPattern("WARN .*Retrying behavioural\\.raw-" + partition + "@" + offset
                         + " key=dlq-user \\(attempt 3\\)")
@@ -150,11 +150,11 @@ class RawEventListenerIntegrationTest {
 
         KafkaTopics.send(SharedSchemaRegistry.bootstrapServers(), "behavioural.raw", "big-user", raw);
 
-        ConsumerRecord<String, byte[]> dead = KafkaTopics.awaitRecord(
-                SharedSchemaRegistry.bootstrapServers(), ValidatorConfiguration.DLQ_TOPIC, eventId, TIMEOUT);
+        ConsumerRecord<String, byte[]> dead =
+                KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), Topics.DLQ, eventId, TIMEOUT);
         assertThat(dead.key()).isEqualTo("big-user");
         assertThat(dead.value()).isEqualTo(raw.getBytes(StandardCharsets.UTF_8));
-        assertNotOn(eventId, ValidatedEventPublisher.VALID_TOPIC, ValidatedEventPublisher.INVALID_TOPIC);
+        assertNotOn(eventId, Topics.VALID, Topics.INVALID);
 
         String nextId = ValidatorTestEvents.uniqueEventId();
         KafkaTopics.send(
@@ -162,8 +162,7 @@ class RawEventListenerIntegrationTest {
                 "behavioural.raw",
                 "big-user",
                 ValidatorTestEvents.json(nextId, "product_viewed", 2, "{\"productId\":\"SKU-981\"}"));
-        KafkaTopics.awaitRecord(
-                SharedSchemaRegistry.bootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, nextId, TIMEOUT);
+        KafkaTopics.awaitRecord(SharedSchemaRegistry.bootstrapServers(), Topics.VALID, nextId, TIMEOUT);
     }
 
     private static byte[] header(ConsumerRecord<String, byte[]> record, String name) {

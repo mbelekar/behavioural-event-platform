@@ -17,6 +17,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":event-contracts"))
     implementation(project(":schema-registration"))
     implementation(libs.spring.boot.starter.kafka)
 

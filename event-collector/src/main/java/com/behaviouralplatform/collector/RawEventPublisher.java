@@ -1,6 +1,7 @@
 package com.behaviouralplatform.collector;
 
 import com.behaviouralplatform.contracts.BehaviouralEvent;
+import com.behaviouralplatform.contracts.Topics;
 import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -9,8 +10,6 @@ import tools.jackson.databind.json.JsonMapper;
 /** Publishes events to behavioural.raw and waits for the broker acknowledgement. */
 @Component
 class RawEventPublisher {
-
-    static final String TOPIC = "behavioural.raw";
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final JsonMapper jsonMapper;
@@ -23,7 +22,7 @@ class RawEventPublisher {
     void publish(BehaviouralEvent event) {
         String json = jsonMapper.writeValueAsString(event);
         try {
-            kafkaTemplate.send(TOPIC, partitionKey(event), json).join();
+            kafkaTemplate.send(Topics.RAW, partitionKey(event), json).join();
         } catch (RuntimeException e) {
             RecordTooLargeException tooLarge = recordTooLarge(e);
             if (tooLarge != null) {
@@ -42,7 +41,7 @@ class RawEventPublisher {
         return null;
     }
 
-    /** userId preserves per-user ordering; sessionId is the fallback (Design.md section 17). */
+    /** userId preserves per-user ordering; sessionId is the fallback (Design.md "Event model"). */
     static String partitionKey(BehaviouralEvent event) {
         return EventRequestChecks.isBlank(event.userId()) ? event.sessionId() : event.userId();
     }

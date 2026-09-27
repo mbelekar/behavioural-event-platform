@@ -1,5 +1,6 @@
 package com.behaviouralplatform.schemas;
 
+import com.behaviouralplatform.contracts.Topics;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
 import java.util.List;
 import org.testcontainers.containers.GenericContainer;
@@ -12,8 +13,7 @@ import org.testcontainers.kafka.KafkaContainer;
  */
 public final class SharedSchemaRegistry {
 
-    public static final List<String> TOPICS =
-            List.of("behavioural.raw", "behavioural.valid", "behavioural.invalid", "validation.dlq");
+    public static final List<String> TOPICS = List.of(Topics.RAW, Topics.VALID, Topics.INVALID, Topics.DLQ);
 
     private static final Network NETWORK = Network.newNetwork();
     private static final KafkaContainer KAFKA = SchemaRegistryContainers.kafka(NETWORK);

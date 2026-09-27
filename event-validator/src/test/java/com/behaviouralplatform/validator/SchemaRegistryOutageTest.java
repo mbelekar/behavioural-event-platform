@@ -2,6 +2,7 @@ package com.behaviouralplatform.validator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.behaviouralplatform.contracts.Topics;
 import com.behaviouralplatform.schemas.KafkaTopics;
 import com.behaviouralplatform.schemas.SchemaRegistration;
 import com.behaviouralplatform.schemas.SchemaRegistryContainers;
@@ -60,25 +61,18 @@ class SchemaRegistryOutageTest {
             KafkaTopics.send(KAFKA.getBootstrapServers(), "behavioural.raw", "user-123", raw);
 
             assertThat(KafkaTopics.recordsContaining(
-                            KAFKA.getBootstrapServers(),
-                            ValidatedEventPublisher.INVALID_TOPIC,
-                            eventId,
-                            Duration.ofSeconds(15)))
+                            KAFKA.getBootstrapServers(), Topics.INVALID, eventId, Duration.ofSeconds(15)))
                     .as("an unavailable registry must never produce an invalid event")
                     .isEmpty();
             assertThat(KafkaTopics.recordsContaining(
-                            KAFKA.getBootstrapServers(),
-                            ValidatorConfiguration.DLQ_TOPIC,
-                            eventId,
-                            Duration.ofSeconds(5)))
+                            KAFKA.getBootstrapServers(), Topics.DLQ, eventId, Duration.ofSeconds(5)))
                     .as("an infrastructure failure is never dead-lettered")
                     .isEmpty();
         } finally {
             docker.unpauseContainerCmd(SCHEMA_REGISTRY.getContainerId()).exec();
         }
 
-        KafkaTopics.awaitRecord(
-                KAFKA.getBootstrapServers(), ValidatedEventPublisher.VALID_TOPIC, eventId, Duration.ofSeconds(60));
+        KafkaTopics.awaitRecord(KAFKA.getBootstrapServers(), Topics.VALID, eventId, Duration.ofSeconds(60));
         assertThat(output.getOut())
                 .as("each failed attempt is visible at WARN, naming the record and the cause")
                 .containsPattern(
@@ -94,7 +88,7 @@ class SchemaRegistryOutageTest {
                 "behavioural.raw",
                 "warm-user",
                 ValidatorTestEvents.json(warmId, "page_viewed", 1, "{\"pageUrl\":\"https://shop.example/home\"}"));
-        KafkaTopics.awaitRecord(bootstrap, ValidatedEventPublisher.VALID_TOPIC, warmId, Duration.ofSeconds(30));
+        KafkaTopics.awaitRecord(bootstrap, Topics.VALID, warmId, Duration.ofSeconds(30));
 
         String stuckKey = "stuck-user";
         String flowingKey = keyOnOtherPartitionThan(stuckKey);
@@ -119,8 +113,8 @@ class SchemaRegistryOutageTest {
                     ValidatorTestEvents.json(
                             flowingId, "page_viewed", 1, "{\"pageUrl\":\"https://shop.example/cart\"}"));
 
-            ConsumerRecord<String, byte[]> flowing = KafkaTopics.awaitRecord(
-                    bootstrap, ValidatedEventPublisher.VALID_TOPIC, flowingId, Duration.ofSeconds(30));
+            ConsumerRecord<String, byte[]> flowing =
+                    KafkaTopics.awaitRecord(bootstrap, Topics.VALID, flowingId, Duration.ofSeconds(30));
             assertThat(flowing.timestamp() - sentAt)
                     .as("an event on another partition is validated without waiting behind the stuck record")
                     .isLessThan(4_000);
@@ -128,7 +122,7 @@ class SchemaRegistryOutageTest {
             docker.unpauseContainerCmd(SCHEMA_REGISTRY.getContainerId()).exec();
         }
 
-        KafkaTopics.awaitRecord(bootstrap, ValidatedEventPublisher.VALID_TOPIC, stuckId, Duration.ofSeconds(60));
+        KafkaTopics.awaitRecord(bootstrap, Topics.VALID, stuckId, Duration.ofSeconds(60));
     }
 
     /** Kafka's default partitioner for a String key on the 6-partition raw topic. */

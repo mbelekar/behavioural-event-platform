@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import com.behaviouralplatform.contracts.Topics;
 import com.behaviouralplatform.schemas.SharedSchemaRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -37,7 +38,7 @@ class ValidatedEventPublisherTest {
                     () -> assertThatThrownBy(
                                     () -> publisher.publishValid("user-123", "{}".getBytes(StandardCharsets.UTF_8), 1))
                             .isInstanceOf(PublishFailedException.class)
-                            .hasMessageContaining(ValidatedEventPublisher.VALID_TOPIC));
+                            .hasMessageContaining(Topics.VALID));
         } finally {
             producerFactory.destroy();
         }

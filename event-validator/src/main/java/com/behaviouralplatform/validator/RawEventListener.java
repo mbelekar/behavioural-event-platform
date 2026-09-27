@@ -1,5 +1,6 @@
 package com.behaviouralplatform.validator;
 
+import com.behaviouralplatform.contracts.Topics;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -12,8 +13,6 @@ import org.springframework.stereotype.Component;
 @Component
 class RawEventListener {
 
-    static final String RAW_TOPIC = "behavioural.raw";
-
     private static final Logger log = LoggerFactory.getLogger(RawEventListener.class);
 
     private final EventValidator validator;
@@ -24,7 +23,7 @@ class RawEventListener {
         this.publisher = publisher;
     }
 
-    @KafkaListener(topics = RAW_TOPIC, groupId = "event-validator")
+    @KafkaListener(topics = Topics.RAW, groupId = "event-validator")
     void onRawEvent(ConsumerRecord<String, byte[]> record) throws IOException {
         JsonNode event = Json.MAPPER.readTree(record.value());
         ValidationResult result = validator.validate(event);
