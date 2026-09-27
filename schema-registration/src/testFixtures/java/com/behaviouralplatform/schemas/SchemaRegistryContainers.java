@@ -32,6 +32,8 @@ public final class SchemaRegistryContainers {
                 .withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
                 .withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:8081")
                 .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", "PLAINTEXT://kafka:19092")
+                // Default 500ms is too short when several containers start at once (parallel Gradle test tasks)
+                .withEnv("SCHEMA_REGISTRY_KAFKASTORE_TIMEOUT_MS", "10000")
                 .waitingFor(Wait.forHttp("/subjects").forStatusCode(200))
                 .withStartupTimeout(Duration.ofMinutes(3));
     }

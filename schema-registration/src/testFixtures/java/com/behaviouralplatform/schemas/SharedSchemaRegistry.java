@@ -18,6 +18,8 @@ public final class SharedSchemaRegistry {
     private static final KafkaContainer KAFKA = SchemaRegistryContainers.kafka(NETWORK);
     private static final GenericContainer<?> SCHEMA_REGISTRY = SchemaRegistryContainers.schemaRegistry(NETWORK);
     private static boolean started;
+    /** A failed start is not retried: later callers get the original error instead of half-started containers. */
+    private static IllegalStateException startFailure;
 
     private SharedSchemaRegistry() {
     }
@@ -26,15 +28,19 @@ public final class SharedSchemaRegistry {
         if (started) {
             return;
         }
-        KAFKA.start();
-        SCHEMA_REGISTRY.start();
-        KafkaTopics.create(KAFKA.getBootstrapServers(), TOPICS);
+        if (startFailure != null) {
+            throw startFailure;
+        }
         try {
+            KAFKA.start();
+            SCHEMA_REGISTRY.start();
+            KafkaTopics.create(KAFKA.getBootstrapServers(), TOPICS);
             SchemaRegistration.register(
                     SchemaRegistryContainers.newClient(SchemaRegistryContainers.url(SCHEMA_REGISTRY)),
                     SchemaRegistryContainers.schemasDir());
         } catch (Exception e) {
-            throw new IllegalStateException("Schema registration failed", e);
+            startFailure = new IllegalStateException("Shared Kafka + Schema Registry failed to start", e);
+            throw startFailure;
         }
         started = true;
     }
