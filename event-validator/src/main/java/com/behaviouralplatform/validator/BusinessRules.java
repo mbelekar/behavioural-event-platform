@@ -5,7 +5,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Currency;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Rules the schema cannot express (ADR 0012). Only called for events that conform to their contract, so every field
@@ -15,6 +17,10 @@ final class BusinessRules {
 
     private static final Duration CLOCK_SKEW = Duration.ofMinutes(5);
     private static final Duration MAX_AGE = Duration.ofDays(7);
+
+    /** ISO 4217 codes that are not currencies: precious metals, bond and accounting units, testing, no currency. */
+    private static final Set<String> NOT_CURRENCIES =
+            Set.of("XAU", "XAG", "XPD", "XPT", "XBA", "XBB", "XBC", "XBD", "XDR", "XSU", "XUA", "XTS", "XXX");
 
     private BusinessRules() {}
 
@@ -30,7 +36,24 @@ final class BusinessRules {
             errors.add(new ValidationError(
                     "EVENT_TOO_OLD", "occurredAt", "occurredAt is more than 7 days before receivedAt"));
         }
+        if (event.get("eventType").asText().equals("purchase_completed")
+                && !isCurrency(event.get("payload").get("currency").asText())) {
+            errors.add(new ValidationError(
+                    "UNKNOWN_CURRENCY", "payload.currency", "currency is not an ISO 4217 currency code"));
+        }
         return errors;
+    }
+
+    private static boolean isCurrency(String code) {
+        if (NOT_CURRENCIES.contains(code)) {
+            return false;
+        }
+        try {
+            Currency.getInstance(code);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private static Instant instant(JsonNode event, String field) {

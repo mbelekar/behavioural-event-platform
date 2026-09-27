@@ -127,6 +127,38 @@ class EventValidatorTest {
         assertErrors(validator.validate(receivedAtNoon("2026-09-20T11:59:59Z")), tuple("EVENT_TOO_OLD", "occurredAt"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"USD", "XAF", "DEM"})
+    void knownCurrencyIsValid(String currency) {
+        assertThat(validator.validate(purchase(currency)).valid()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ABC", "XXX", "XAU"})
+    void unknownCurrencyIsInvalid(String currency) {
+        assertErrors(validator.validate(purchase(currency)), tuple("UNKNOWN_CURRENCY", "payload.currency"));
+    }
+
+    @Test
+    void reportsEveryFailingRule() {
+        ObjectNode purchase = purchase("ABC");
+        purchase.put("receivedAt", "2026-09-27T12:00:00Z");
+        purchase.put("occurredAt", "2026-09-27T12:10:00Z");
+
+        assertErrors(
+                validator.validate(purchase),
+                tuple("UNKNOWN_CURRENCY", "payload.currency"),
+                tuple("OCCURRED_IN_FUTURE", "occurredAt"));
+    }
+
+    @Test
+    void rulesAreNotCheckedForNonConformingEvents() {
+        ObjectNode purchase = purchase("ABC");
+        ((ObjectNode) purchase.get("payload")).remove("amount");
+
+        assertErrors(validator.validate(purchase), tuple("REQUIRED_FIELD_MISSING", "payload.amount"));
+    }
+
     @Test
     void unknownEventType() {
         ObjectNode event = node(json(uniqueEventId(), "wishlist_added", 1, "{}"));
@@ -204,6 +236,14 @@ class EventValidatorTest {
                 "product\u0000viewed",
                 "Product_Viewed",
                 "behavioural_envelope");
+    }
+
+    private static ObjectNode purchase(String currency) {
+        return node(json(
+                uniqueEventId(),
+                "purchase_completed",
+                1,
+                "{\"orderId\":\"order-1\",\"amount\":49.99,\"currency\":\"%s\"}".formatted(currency)));
     }
 
     private static ObjectNode receivedAtNoon(String occurredAt) {
