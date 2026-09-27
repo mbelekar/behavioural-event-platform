@@ -110,6 +110,23 @@ class EventValidatorTest {
         assertErrors(validator.validate(purchase), tuple("SCHEMA_VIOLATION", "payload.currency"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"2026-09-27T12:05:00Z", "2026-09-20T12:00:00Z"})
+    void occurredAtWithinLimitsIsValid(String occurredAt) {
+        assertThat(validator.validate(receivedAtNoon(occurredAt)).valid()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2026-09-27T12:05:01Z", "2026-09-27T14:05:01+02:00"})
+    void occurredAtInTheFutureIsInvalid(String occurredAt) {
+        assertErrors(validator.validate(receivedAtNoon(occurredAt)), tuple("OCCURRED_IN_FUTURE", "occurredAt"));
+    }
+
+    @Test
+    void occurredAtTooOldIsInvalid() {
+        assertErrors(validator.validate(receivedAtNoon("2026-09-20T11:59:59Z")), tuple("EVENT_TOO_OLD", "occurredAt"));
+    }
+
     @Test
     void unknownEventType() {
         ObjectNode event = node(json(uniqueEventId(), "wishlist_added", 1, "{}"));
@@ -187,6 +204,13 @@ class EventValidatorTest {
                 "product\u0000viewed",
                 "Product_Viewed",
                 "behavioural_envelope");
+    }
+
+    private static ObjectNode receivedAtNoon(String occurredAt) {
+        ObjectNode event = productViewedV2();
+        event.put("receivedAt", "2026-09-27T12:00:00Z");
+        event.put("occurredAt", occurredAt);
+        return event;
     }
 
     private static void assertErrors(ValidationResult result, Tuple... expected) {

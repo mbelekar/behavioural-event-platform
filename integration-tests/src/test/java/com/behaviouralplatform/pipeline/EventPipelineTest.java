@@ -12,6 +12,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -81,11 +82,12 @@ class EventPipelineTest {
                 .contains("\"field\":\"payload.productId\"");
     }
 
+    /** occurredAt is now: the collector sets receivedAt to now, and the validator rejects events over 7 days old. */
     private static String event(String eventId, String payload) {
         return """
-                {"eventId":"%s","eventType":"product_viewed","schemaVersion":2,"occurredAt":"2026-09-27T01:23:31Z",
+                {"eventId":"%s","eventType":"product_viewed","schemaVersion":2,"occurredAt":"%s",
                  "source":"web","userId":"user-123","payload":%s}
-                """.formatted(eventId, payload);
+                """.formatted(eventId, Instant.now(), payload);
     }
 
     private static int post(String body) throws Exception {

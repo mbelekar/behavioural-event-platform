@@ -58,7 +58,10 @@ class EventValidator {
     private static ValidationResult validateAgainst(SchemaLookup.Found found, JsonNode event) {
         try {
             found.schema().validate(event);
-            return ValidationResult.passed(found.schemaId());
+            List<ValidationError> ruleErrors = BusinessRules.check(event);
+            return ruleErrors.isEmpty()
+                    ? ValidationResult.passed(found.schemaId())
+                    : ValidationResult.failed(ruleErrors);
         } catch (ValidationException e) {
             return ValidationResult.failed(SchemaViolations.toErrors(e));
         } catch (JsonProcessingException e) {

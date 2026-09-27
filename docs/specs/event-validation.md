@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Turn untrusted events on `behavioural.raw` into a trusted stream. Events that conform to their registered contract go to `behavioural.valid`; events that don't go to `behavioural.invalid` with structured errors.
+Turn untrusted events on `behavioural.raw` into a trusted stream. Events that conform to their registered contract and pass the platform's business rules go to `behavioural.valid`; events that don't go to `behavioural.invalid` with structured errors.
 
 ## Requirements
 
@@ -22,9 +22,13 @@ Turn untrusted events on `behavioural.raw` into a trusted stream. Events that co
   | `UNKNOWN_EVENT_TYPE` | No contract for `eventType`; `behavioural_envelope`; or not a valid type name (lower-case letter, then lower-case letters, digits or `_`, at most 100 characters) | `eventType` |
   | `UNKNOWN_SCHEMA_VERSION` | No such version for the type, or `schemaVersion` < 1 | `schemaVersion` |
   | `SCHEMA_VIOLATION` | Any other contract rule (e.g. pattern, minimum) | The value |
+  | `OCCURRED_IN_FUTURE` | `occurredAt` is more than 5 minutes after `receivedAt` | `occurredAt` |
+  | `EVENT_TOO_OLD` | `occurredAt` is more than 7 days before `receivedAt` | `occurredAt` |
+  | `UNKNOWN_CURRENCY` | A `purchase_completed` `currency` is not an ISO 4217 code known to the JDK, or is one of the codes that are not currencies: `XAU`, `XAG`, `XPD`, `XPT`, `XBA`, `XBB`, `XBC`, `XBD`, `XDR`, `XSU`, `XUA`, `XTS`, `XXX` | `payload.currency` |
 
 - **R7.** An event is processed once its outcome record is acknowledged by Kafka. Delivery is at-least-once.
 - **R8.** Invalid events are logged at INFO with their `eventId` and errors.
+- **R9.** The business rules (the last three codes in R6) are checked only for an event that conforms to its contract, and every failing rule is reported. Times are compared as instants, whatever their offsets.
 
 ## Acceptance criteria
 
@@ -48,6 +52,18 @@ Turn untrusted events on `behavioural.raw` into a trusted stream. Events that co
   | `purchase_completed` `currency` `"usd"` | `SCHEMA_VIOLATION` | `payload.currency` |
 
 - **AC6.** An event produces a record on exactly one of `behavioural.valid`, `behavioural.invalid` and `validation.dlq` (see [validation resilience](validation-resilience.md)).
+- **AC7.** With `receivedAt` `2026-09-27T12:00:00Z`, these `occurredAt` values give:
+
+  | `occurredAt` | Outcome |
+  | --- | --- |
+  | `2026-09-27T12:05:00Z` or `2026-09-20T12:00:00Z` (exactly at a limit) | valid |
+  | `2026-09-27T12:05:01Z` | `OCCURRED_IN_FUTURE` at `occurredAt` |
+  | `2026-09-27T14:05:01+02:00` (the same instant, another offset) | `OCCURRED_IN_FUTURE` at `occurredAt` |
+  | `2026-09-20T11:59:59Z` | `EVENT_TOO_OLD` at `occurredAt` |
+
+- **AC8.** A `purchase_completed` `currency` of `USD`, `XAF` or `DEM` is valid; `ABC`, `XXX` or `XAU` gives `UNKNOWN_CURRENCY` at `payload.currency`.
+- **AC9.** A `purchase_completed` event with `currency` `ABC` and an `occurredAt` more than 5 minutes in the future has exactly two errors: `UNKNOWN_CURRENCY` and `OCCURRED_IN_FUTURE`.
+- **AC10.** A `purchase_completed` event without `amount` and with `currency` `ABC` has only `REQUIRED_FIELD_MISSING` at `payload.amount`: business rules are not checked for an event that doesn't conform.
 
 ## Failure and edge cases
 
@@ -57,7 +73,7 @@ Turn untrusted events on `behavioural.raw` into a trusted stream. Events that co
 | A version is registered after events using it were marked invalid | Those events stay invalid; later events validate normally. |
 | The same raw event is delivered twice | Validated and published twice with the same `eventId`; consumers deduplicate. |
 | Validator restarts | Resumes from the last committed offset; published but uncommitted events are processed again. |
-
-## Discrepancies
-
-- `Design.md` includes business validation after schema validation. It is not implemented; only contract validation runs.
+| Validation runs long after the event was received (a backlog or a replay from `validation.dlq`) | Same outcome: time rules use `receivedAt`, not the validator's clock. |
+| An event queued offline for more than 7 days | Invalid (`EVENT_TOO_OLD`). |
+| A withdrawn currency code such as `DEM` | Valid; only codes the JDK doesn't know, and codes that aren't currencies, are rejected. The accepted set can change when the JDK is upgraded. |
+| Events already on `behavioural.valid` when the rules are introduced | Not rechecked. |
