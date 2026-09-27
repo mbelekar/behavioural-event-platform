@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /** Runs a service's boot jar as a separate JVM, the way it runs in production. Output goes to build/service-logs. */
 final class ServiceProcess implements AutoCloseable {
@@ -35,5 +36,13 @@ final class ServiceProcess implements AutoCloseable {
     @Override
     public void close() {
         process.destroy();
+        try {
+            if (!process.waitFor(10, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            process.destroyForcibly();
+        }
     }
 }
