@@ -24,7 +24,10 @@ import org.testcontainers.kafka.KafkaContainer;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+/** Kafka's record size limit is lowered below the collector's request cap, so its size rejection can be tested. */
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "spring.kafka.producer.properties.max.request.size=32768")
 @Import(TestcontainersConfiguration.class)
 class EventIngestionIntegrationTest {
 
@@ -59,7 +62,7 @@ class EventIngestionIntegrationTest {
         String eventId = "too-large-" + UUID.randomUUID();
         ObjectNode event = TestEvents.validNode();
         event.put("eventId", eventId);
-        ((ObjectNode) event.get("payload")).put("category", "x".repeat(1_100_000));
+        ((ObjectNode) event.get("payload")).put("category", "x".repeat(40_000));
         HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v1/events"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(event.toString()))
@@ -70,6 +73,8 @@ class EventIngestionIntegrationTest {
         assertThat(response.statusCode()).isEqualTo(413);
         assertThat(response.headers().firstValue("Content-Type"))
                 .hasValueSatisfying(contentType -> assertThat(contentType).startsWith("application/problem+json"));
+        assertThat(TestEvents.MAPPER.readTree(response.body()).get("detail").asString())
+                .isEqualTo("Event exceeds the maximum size accepted by the platform");
         assertThat(countRecordsContaining(RawEventPublisher.TOPIC, eventId, Duration.ofSeconds(5)))
                 .isZero();
     }
