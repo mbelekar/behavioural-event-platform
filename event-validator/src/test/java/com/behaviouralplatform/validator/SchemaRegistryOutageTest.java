@@ -6,7 +6,10 @@ import com.behaviouralplatform.schemas.KafkaTopics;
 import com.behaviouralplatform.schemas.SchemaRegistration;
 import com.behaviouralplatform.schemas.SchemaRegistryContainers;
 import com.behaviouralplatform.schemas.SharedSchemaRegistry;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.utils.Utils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -67,5 +70,65 @@ class SchemaRegistryOutageTest {
         assertThat(output.getOut())
                 .as("each failed attempt is visible at WARN, naming the record and the cause")
                 .containsPattern("WARN .*Retrying behavioural\\.raw-\\d+@\\d+ key=user-123 \\(attempt \\d+\\): .*SchemaRegistryUnavailableException");
+    }
+
+    @Test
+    void otherPartitionsKeepFlowingWhileOneRecordWaits(CapturedOutput output) throws Exception {
+        String bootstrap = KAFKA.getBootstrapServers();
+        String warmId = ValidatorTestEvents.uniqueEventId();
+        KafkaTopics.send(bootstrap, "behavioural.raw", "warm-user",
+                ValidatorTestEvents.json(warmId, "page_viewed", 1, "{\"pageUrl\":\"https://shop.example/home\"}"));
+        KafkaTopics.awaitRecord(bootstrap, ValidatedEventPublisher.VALID_TOPIC, warmId, Duration.ofSeconds(30));
+
+        String stuckKey = "stuck-user";
+        String flowingKey = keyOnOtherPartitionThan(stuckKey);
+        String stuckId = ValidatorTestEvents.uniqueEventId();
+        String flowingId = ValidatorTestEvents.uniqueEventId();
+        var docker = SCHEMA_REGISTRY.getDockerClient();
+
+        docker.pauseContainerCmd(SCHEMA_REGISTRY.getContainerId()).exec();
+        try {
+            KafkaTopics.send(bootstrap, "behavioural.raw", stuckKey,
+                    ValidatorTestEvents.json(stuckId, "checkout_started", 1, "{\"cartId\":\"cart-1\"}"));
+            awaitOutput(output, "key=" + stuckKey, Duration.ofSeconds(30));
+
+            long sentAt = System.currentTimeMillis();
+            KafkaTopics.send(bootstrap, "behavioural.raw", flowingKey,
+                    ValidatorTestEvents.json(flowingId, "page_viewed", 1, "{\"pageUrl\":\"https://shop.example/cart\"}"));
+
+            ConsumerRecord<String, byte[]> flowing = KafkaTopics.awaitRecord(
+                    bootstrap, ValidatedEventPublisher.VALID_TOPIC, flowingId, Duration.ofSeconds(30));
+            assertThat(flowing.timestamp() - sentAt)
+                    .as("an event on another partition is validated without waiting behind the stuck record")
+                    .isLessThan(4_000);
+        } finally {
+            docker.unpauseContainerCmd(SCHEMA_REGISTRY.getContainerId()).exec();
+        }
+
+        KafkaTopics.awaitRecord(bootstrap, ValidatedEventPublisher.VALID_TOPIC, stuckId, Duration.ofSeconds(60));
+    }
+
+    /** Kafka's default partitioner for a String key on the 6-partition raw topic. */
+    private static int partition(String key) {
+        return Utils.toPositive(Utils.murmur2(key.getBytes(StandardCharsets.UTF_8))) % 6;
+    }
+
+    private static String keyOnOtherPartitionThan(String key) {
+        for (int i = 0; ; i++) {
+            String candidate = "flowing-user-" + i;
+            if (partition(candidate) != partition(key)) {
+                return candidate;
+            }
+        }
+    }
+
+    private static void awaitOutput(CapturedOutput output, String text, Duration timeout) throws InterruptedException {
+        long deadline = System.nanoTime() + timeout.toNanos();
+        while (!output.getOut().contains(text)) {
+            if (System.nanoTime() > deadline) {
+                throw new AssertionError("'" + text + "' not logged within " + timeout);
+            }
+            Thread.sleep(200);
+        }
     }
 }

@@ -5,6 +5,8 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       auto-offset-reset: earliest
+    listener:
+      concurrency: 6   # one thread per behavioural.raw partition, so a waiting record only holds up its own partition
     producer:
       acks: all
       value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
