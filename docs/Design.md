@@ -811,24 +811,26 @@ Service-specific business logic remains within the owning service.
 
 Important decisions should be documented separately as ADRs.
 
-Initial ADRs:
+ADRs live in `docs/decisions/` and are numbered sequentially in the order they are written (`NNNN-short-title.md`).
+
+Initial ADR topics:
 
 ```text
-0001-use-kafka-as-durable-ingestion-boundary.md
+use Kafka as durable ingestion boundary
 
-0002-validate-events-asynchronously.md
+validate events asynchronously
 
-0003-separate-schema-and-business-validation.md
+separate schema and business validation
 
-0004-use-at-least-once-delivery.md
+use at-least-once delivery
 
-0005-use-event-id-for-idempotency.md
+use event ID for idempotency
 
-0006-separate-invalid-events-from-processing-dlq.md
+separate invalid events from processing DLQ
 
-0007-use-separate-kafka-configurations-per-cluster.md
+use separate Kafka configurations per cluster
 
-0008-preserve-user-ordering-with-partition-keys.md
+preserve user ordering with partition keys
 ```
 
 Each ADR should document:

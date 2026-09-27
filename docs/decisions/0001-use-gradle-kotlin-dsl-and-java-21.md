@@ -1,4 +1,4 @@
-# 0009 — Use Gradle (Kotlin DSL) and Java 21
+# 0001 — Use Gradle (Kotlin DSL) and Java 21
 
 ## Decision
 
