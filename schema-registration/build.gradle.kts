@@ -1,5 +1,6 @@
 plugins {
     `java-library`
+    jacoco
     `java-test-fixtures`
 }
 
@@ -30,6 +31,7 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
     systemProperty("schemas.dir", rootDir.resolve("event-contracts/schemas").absolutePath)
 }
 
@@ -41,4 +43,10 @@ tasks.register<JavaExec>("registerSchemas") {
     args(
         providers.gradleProperty("schemaRegistryUrl").getOrElse("http://localhost:8081"),
         rootDir.resolve("event-contracts/schemas").absolutePath)
+}
+
+tasks.jacocoTestReport {
+    reports {
+        xml.required = true
+    }
 }

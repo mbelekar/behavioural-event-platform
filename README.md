@@ -139,6 +139,8 @@ The project uses Testcontainers to test against real Kafka and Schema Registry i
 
 The build also fails on unformatted Java code; `./auto/format` fixes it (palantir-java-format).
 
+JaCoCo coverage reports are written to `<module>/build/reports/jacoco/test/html/index.html`; CI uploads them as the `coverage` artifact.
+
 CI runs the same command on every push to `main` and every pull request. The tests cover ingestion, schema registration and evolution, valid and invalid events, and dependency failure behaviour.
 
 ## Project structure

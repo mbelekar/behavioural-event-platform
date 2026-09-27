@@ -1,5 +1,6 @@
 plugins {
     java
+    jacoco
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
 }
@@ -28,5 +29,12 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
     systemProperty("schemas.dir", rootDir.resolve("event-contracts/schemas").absolutePath)
+}
+
+tasks.jacocoTestReport {
+    reports {
+        xml.required = true
+    }
 }

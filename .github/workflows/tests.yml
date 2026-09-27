@@ -21,6 +21,13 @@ jobs:
       - name: Build and run all tests
         run: ./auto/test
 
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: "*/build/reports/jacoco/test/"
+
       - name: Upload test reports and service logs
         if: failure()
         uses: actions/upload-artifact@v7
