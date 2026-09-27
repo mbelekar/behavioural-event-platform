@@ -22,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.testcontainers.kafka.KafkaContainer;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration.class)
@@ -51,6 +52,47 @@ class EventIngestionIntegrationTest {
         assertThat(published.get("correlationId").asString()).isEqualTo("req-789");
         assertThat(published.hasNonNull("receivedAt")).isTrue();
         assertThat(published.get("payload")).isEqualTo(TestEvents.validNode().get("payload"));
+    }
+
+    @Test
+    void eventTooLargeForKafkaIsRejectedWith413() throws Exception {
+        String eventId = "too-large-" + UUID.randomUUID();
+        ObjectNode event = TestEvents.validNode();
+        event.put("eventId", eventId);
+        ((ObjectNode) event.get("payload")).put("category", "x".repeat(1_100_000));
+        HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v1/events"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(event.toString()))
+                .build();
+
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(413);
+        assertThat(response.headers().firstValue("Content-Type")).hasValueSatisfying(
+                contentType -> assertThat(contentType).startsWith("application/problem+json"));
+        assertThat(countRecordsContaining(RawEventPublisher.TOPIC, eventId, Duration.ofSeconds(5))).isZero();
+    }
+
+    private int countRecordsContaining(String topic, String text, Duration pollFor) {
+        Map<String, Object> config = Map.of(
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers(),
+                ConsumerConfig.GROUP_ID_CONFIG, "it-" + UUID.randomUUID(),
+                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        int count = 0;
+        try (var consumer = new KafkaConsumer<String, String>(config)) {
+            consumer.subscribe(List.of(topic));
+            long deadline = System.currentTimeMillis() + pollFor.toMillis();
+            while (System.currentTimeMillis() < deadline) {
+                for (ConsumerRecord<String, String> record : consumer.poll(Duration.ofMillis(500))) {
+                    if (record.value().contains(text)) {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
     }
 
     private ConsumerRecord<String, String> readSingleRecord(String topic) {

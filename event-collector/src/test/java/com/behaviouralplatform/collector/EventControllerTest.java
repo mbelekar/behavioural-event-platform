@@ -101,6 +101,15 @@ class EventControllerTest {
                 .andExpect(problem(503));
     }
 
+    @Test
+    void returnsPayloadTooLargeWhenKafkaRejectsTheEventSize() throws Exception {
+        doThrow(new EventTooLargeException("01K5R4F8W8J5Z8XJH0N6F4P2C1", new RuntimeException("record too large")))
+                .when(publisher).publish(any());
+
+        mvc.perform(post("/v1/events").contentType(APPLICATION_JSON).content(TestEvents.VALID_JSON))
+                .andExpect(problem(413));
+    }
+
     /** Every error response uses the same RFC 9457 ProblemDetail shape. */
     private static ResultMatcher problem(int status) {
         return result -> {
