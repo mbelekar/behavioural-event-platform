@@ -43,7 +43,3 @@ Accept behavioural events over HTTP and store them durably in `behavioural.raw` 
 | Wrong payload fields, or unknown or malformed `eventType` / `schemaVersion` | `202`. The validator marks the event invalid. |
 | Schema Registry unavailable | No effect on ingestion. |
 | Event larger than Kafka's 1 MB request limit | `413`. The client must not retry it; the collector still reads the whole body before Kafka rejects it. |
-
-## Discrepancies
-
-- `Design.md` ("Design principles") says raw events represent what the producer sent. The collector adds `correlationId` and `receivedAt`, as ADR 0004 states.

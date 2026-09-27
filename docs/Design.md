@@ -65,6 +65,8 @@ All events share an envelope:
 
 `payload` is defined by the event-specific schema.
 
+The collector adds two platform fields before publishing: `correlationId` (from the request, or generated) and `receivedAt` (the time of receipt). Both are part of the envelope contract.
+
 `eventId` is supplied by the producer and remains unchanged throughout the pipeline. Kafka records are keyed by `userId`, falling back to `sessionId`, to preserve ordering for a user or session.
 
 ## Ingestion
@@ -193,7 +195,7 @@ Unit tests are used for deterministic validation and routing logic.
 
 **Kafka is the durable ingestion boundary.** Once Kafka acknowledges an event, downstream processing can happen asynchronously.
 
-**Raw events represent what the producer sent.** Validation creates new trusted or invalid streams rather than changing the raw event.
+**Raw events preserve what the producer sent.** The collector only adds platform metadata. Validation creates new trusted or invalid streams rather than changing the raw event.
 
 **Validation creates a trust boundary.** Consumers of `behavioural.valid` should not repeat contract validation.
 

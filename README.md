@@ -53,7 +53,7 @@ flowchart LR
     VALIDATOR -->|valid| VALID[(behavioural.valid)]
     VALIDATOR -->|invalid| INVALID[(behavioural.invalid)]
 
-    VALID --> ROUTER[Event Router]
+    VALID -. planned .-> ROUTER[Event Router<br/>planned]
     ROUTER -. planned .-> TARGET[(Kafka Cluster B)]
 ```
 
@@ -144,7 +144,9 @@ event-collector/       HTTP → behavioural.raw
 event-validator/       raw → schema validation → valid / invalid
 event-contracts/       event models and JSON Schemas
 schema-registration/   Schema Registry registration
-docs/                  design and architecture decisions
+integration-tests/     pipeline tests running the service jars
+docs/                  design, specs and architecture decisions
+docker-compose.yml     local Kafka, Schema Registry and topics
 ```
 
 ## Documentation
